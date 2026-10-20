@@ -5,14 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TGC Project Portal (Shell)</title>
 
+<!-- Favicons (same image as the EG Executive Dashboard) -->
+<link rel="icon" type="image/png" href="https://static.wixstatic.com/media/4f7dd4_fa97d3a434c14b45a582dd8e3459bdfe~mv2.png">
+<link rel="icon" type="image/png" sizes="32x32" href="https://static.wixstatic.com/media/4f7dd4_fa97d3a434c14b45a582dd8e3459bdfe~mv2.png">
+<link rel="apple-touch-icon" sizes="180x180" href="https://static.wixstatic.com/media/4f7dd4_fa97d3a434c14b45a582dd8e3459bdfe~mv2.png">
+
 <!--
   ============================================================
-  TGC PROJECT PORTAL — SHELL v0.3
+  TGC PROJECT PORTAL — SHELL v0.4.2
   ============================================================
   HOW TO PREVIEW
     Paste this entire file into the w3schools Tryit editor
     (https://www.w3schools.com/html/tryit.asp?filename=tryhtml_default)
     and click Run. Everything is inline; nothing to install.
+
+  WHAT CHANGED IN v0.4.2
+    • Favicon added (same image as the EG Executive Dashboard).
+
+  WHAT CHANGED IN v0.4.1
+    • After sign-in and on every page change, the page opens at the very top
+      (greeting and date visible) instead of under the sticky header.
+
+  WHAT CHANGED IN v0.4
+    • Boot spinner and flying-icon hand-off to the login, matching the
+      EG Executive Dashboard sign-in.
 
   WHAT CHANGED IN v0.3
     • Visual formatting returned to v0.1 (titles, panels, tables, buttons,
@@ -89,6 +105,8 @@
   --tex-header:url('https://static.wixstatic.com/media/4f7dd4_d05c939dec47458fa6367dd45bb71018~mv2.png');
 
   --chrome-bg:linear-gradient(135deg,#204768 0%,#183752 55%,#0f2234 100%);
+  /* Exact gradient from the EG dashboard’s login spinner and login screen */
+  --auth-bg:linear-gradient(135deg,rgba(20,48,75,.99) 0%,rgba(15,36,56,.995) 55%,rgba(8,20,32,1) 100%);
   --shadow:0 4px 12px rgba(0,0,0,.05);
   --shadow-lg:0 24px 60px rgba(0,0,0,.28);
 
@@ -129,6 +147,7 @@
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none !important}
 html,body{margin:0}
+html{scroll-padding-top:var(--chrome-h)}
 body{
   font-family:"Poppins",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
   background-color:var(--bg);
@@ -151,9 +170,11 @@ a{color:var(--accent-text)}
    LOGIN
    ============================================================ */
 .login{
-  min-height:100vh;display:flex;align-items:center;justify-content:center;
-  padding:2rem 1rem;background:var(--chrome-bg);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:2rem;padding:2rem 1rem;box-sizing:border-box;background:var(--auth-bg);
 }
+/* Held invisible (but laid out, so the icon slot can be measured) until the icon lands */
+.login.handoff{opacity:0;pointer-events:none}
 .login-card{
   width:100%;max-width:440px;
   background:rgba(255,255,255,.06);
@@ -161,7 +182,13 @@ a{color:var(--accent-text)}
   border-radius:20px;padding:2.25rem 2rem 2rem;
   box-shadow:var(--shadow-lg);color:#fff;
 }
-.login-icon{width:72px;height:72px;object-fit:contain;display:block;margin:0 auto 1rem}
+/* Icon slot above the card; the flying icon lands here (same 80px slot as the dashboard) */
+.login-icon-slot{
+  width:80px;height:80px;min-width:80px;min-height:80px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.login-icon{width:80px;height:80px;object-fit:contain;display:block;border-radius:12px}
+.login-icon.pending{visibility:hidden}
 .login h1{margin:0;font-size:1.5rem;font-weight:700;text-align:center}
 .login-sub{margin:.25rem 0 1.5rem;color:rgba(255,255,255,.6);font-size:.85rem;text-align:center}
 .btn-signin{
@@ -195,6 +222,30 @@ a{color:var(--accent-text)}
   display:grid;place-items:center;
 }
 .avatar.corp{background:#fff;color:var(--deep)}
+
+
+/* ============================================================
+   BOOT SPINNER + FLYING ICON (mirrors the EG dashboard sign-in)
+   ============================================================ */
+.boot-spinner{
+  position:fixed;inset:0;z-index:1000;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.25rem;
+  background:var(--auth-bg);
+}
+.boot-ring{position:relative;width:140px;height:140px;flex-shrink:0}
+.boot-ring svg{position:absolute;inset:0;width:140px;height:140px;animation:bootSpin 1s linear infinite}
+.boot-ring .boot-icon-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.boot-ring img{width:80px;height:80px;object-fit:contain;border-radius:12px}
+.boot-label{
+  font-family:"Poppins",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  font-size:1rem;font-weight:600;color:rgba(255,255,255,.9);letter-spacing:.4px;
+}
+@keyframes bootSpin{to{transform:rotate(360deg)}}
+.flying-icon{
+  position:fixed;width:80px;height:80px;border-radius:14px;object-fit:contain;
+  z-index:1001;pointer-events:none;will-change:transform,opacity;
+}
+.flying-icon.is-flying{transition:transform .65s cubic-bezier(.4,0,.2,1),opacity .3s ease}
 
 /* ============================================================
    CHROME (Garrett header: navy + header texture)
@@ -654,21 +705,36 @@ textarea.draft:disabled{background:var(--surface-2);color:var(--muted)}
 </style>
 </head>
 
-<!-- Favicons -->
-<link rel="icon" href="https://static.wixstatic.com/media/4f7dd4_fa97d3a434c14b45a582dd8e3459bdfe~mv2.png" type="image/x-icon">
-<link rel="icon" type="image/png" sizes="32x32" href="https://static.wixstatic.com/media/4f7dd4_fa97d3a434c14b45a582dd8e3459bdfe~mv2.png">
-<link rel="apple-touch-icon" sizes="180x180" href="https://static.wixstatic.com/media/4f7dd4_fa97d3a434c14b45a582dd8e3459bdfe~mv2.png">
-
 <body>
+
+<!-- ============================================================
+     BOOT SPINNER (shown on load, then the icon flies to the login)
+     ============================================================ -->
+<div id="bootSpinner" class="boot-spinner" role="status" aria-live="polite">
+  <div class="boot-ring">
+    <svg viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="70" cy="70" r="62" stroke="rgba(255,255,255,0.18)" stroke-width="4"/>
+      <path d="M70 8 A62 62 0 0 1 132 70" stroke="#fdb82b" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+    <div class="boot-icon-wrap">
+      <img id="bootIcon"
+           src="https://static.wixstatic.com/shapes/4f7dd4_5f4c5be1aff84f318665f8bffa785018.svg"
+           alt="" onerror="this.style.display='none'">
+    </div>
+  </div>
+  <div class="boot-label">Loading Project Management Portal&hellip;</div>
+</div>
 
 <!-- ============================================================
      LOGIN VIEW
      ============================================================ -->
-<div id="loginView" class="login">
-  <div class="login-card">
-    <img class="login-icon"
+<div id="loginView" class="login handoff" aria-hidden="true">
+  <div class="login-icon-slot" id="loginIconSlot">
+    <img class="login-icon pending" id="loginIcon"
          src="https://static.wixstatic.com/shapes/4f7dd4_5f4c5be1aff84f318665f8bffa785018.svg"
          alt="" onerror="this.style.display='none'">
+  </div>
+  <div class="login-card">
     <h1>Project Management Portal</h1>
     <p class="login-sub">The Garrett Companies | Authorized Access Only</p>
 
@@ -696,7 +762,7 @@ textarea.draft:disabled{background:var(--surface-2);color:var(--muted)}
              onerror="this.style.display='none';document.getElementById('brandFallback').hidden=false;">
         <span id="brandFallback" class="brand-fallback" hidden>THE GARRETT COMPANIES</span>
         <span class="top-divider brand-divider" aria-hidden="true"></span>
-        <span class="brand-name">Project Portal</span>
+        <span class="brand-name">Project Management Portal</span>
       </div>
 
       <div class="top-right">
@@ -759,10 +825,10 @@ const CONFIG = {
            "corporate" = sees every project, view only
    ============================================================ */
 const USERS = [
-  { id:"u1", name:"Markus Kluga",    initials:"MK", role:"Project Manager",        email:"jordan.lee@example.com",    access:"project",   projects:["fillmore","parkerii"] },
-  { id:"u2", name:"Grace Wilczewski",     initials:"GW", role:"Assistant Project Manager", email:"sam.patel@example.com",     access:"project",   projects:["knoxville","forumii","uptowncommons"] },
-  { id:"u3", name:"Rylin Flick", initials:"RF", role:"Project Engineer",        email:"taylor.brooks@example.com", access:"project",   projects:["emblemmesa"] },
-  { id:"u4", name:"Eric Garrett",  initials:"EG", role:"Chief Executive Officer",   email:"morgan.ellis@example.com",  access:"corporate", projects:[] }
+  { id:"u1", name:"Markus Kluga",    initials:"MK", role:"Project Manager",        email:"markus.kluga@example.com",    access:"project",   projects:["fillmore","parkerii"] },
+  { id:"u2", name:"Grace Wilczewski",     initials:"GW", role:"Assistant Project Manager", email:"grace.wilczewski@example.com",     access:"project",   projects:["knoxville","forumii","uptowncommons"] },
+  { id:"u3", name:"Rylin Flick", initials:"RF", role:"Project Engineer",        email:"rylin.flick@example.com", access:"project",   projects:["emblemmesa"] },
+  { id:"u4", name:"Eric Garrett",  initials:"EG", role:"Chief Executive Officer",   email:"eric.garrett@example.com",  access:"corporate", projects:[] }
 ];
 
 const PROJECTS = {
@@ -1097,11 +1163,11 @@ const AUTOMATIONS = [
 ];
 
 const ACTIVITY = [
-  { when:"Yesterday 4:12 PM",  actor:"Jordan Lee",    action:"Approved",            item:"RFI #041, Stair 2 guardrail height",       project:"fillmore",      ref:"RFI #041",              edited:false },
-  { when:"Yesterday 3:48 PM",  actor:"Sam Patel",     action:"Approved",            item:"Submittal review, hollow metal frames",    project:"knoxville",     ref:"Submittal 08 11 13-02", edited:false },
-  { when:"Yesterday 2:30 PM",  actor:"Jordan Lee",    action:"Approved with edits", item:"CO-009, unit cabinet hardware upgrade",    project:"parkerii",      ref:"CCO-009",               edited:true  },
-  { when:"Yesterday 1:15 PM",  actor:"Sam Patel",     action:"Returned to Claude",  item:"Back charge, roofing debris",              project:"forumii",       ref:"Revision requested",    edited:false },
-  { when:"Yesterday 11:02 AM", actor:"Taylor Brooks", action:"Approved",            item:"Pay App #9, Desert Line Framing",          project:"emblemmesa",    ref:"Pay App #9",            edited:false },
+  { when:"Yesterday 4:12 PM",  actor:"Markus Kluga",  action:"Approved",            item:"RFI #041, Stair 2 guardrail height",       project:"fillmore",      ref:"RFI #041",              edited:false },
+  { when:"Yesterday 3:48 PM",  actor:"Grace Wilczewski",  action:"Approved",            item:"Submittal review, hollow metal frames",    project:"knoxville",     ref:"Submittal 08 11 13-02", edited:false },
+  { when:"Yesterday 2:30 PM",  actor:"Markus Kluga",  action:"Approved with edits", item:"CO-009, unit cabinet hardware upgrade",    project:"parkerii",      ref:"CCO-009",               edited:true  },
+  { when:"Yesterday 1:15 PM",  actor:"Grace Wilczewski",  action:"Returned to Claude",  item:"Back charge, roofing debris",              project:"forumii",       ref:"Revision requested",    edited:false },
+  { when:"Yesterday 11:02 AM", actor:"Rylin Flick",   action:"Approved",            item:"Pay App #9, Desert Line Framing",          project:"emblemmesa",    ref:"Pay App #9",            edited:false },
   { when:"Yesterday 6:05 AM",  actor:"Claude",        action:"Prepared",            item:"Weekly OAC agenda",                        project:"fillmore",      ref:"Draft",                 edited:false },
   { when:"Yesterday 5:40 AM",  actor:"Claude",        action:"Automated",           item:"Punch assignee check, 3 items unassigned", project:"uptowncommons", ref:"Flag raised",           edited:false },
   { when:"Yesterday 5:30 AM",  actor:"Claude",        action:"Automated",           item:"Daily field report digest",                project:"emblemmesa",    ref:"Digest",                edited:false }
@@ -1327,8 +1393,7 @@ async function signIn(userId, btn){
     $("#shellView").hidden = false;
     renderChrome();
     render();
-    window.scrollTo(0,0);
-    $("#main").focus();
+    scrollToTopAndFocusMain();
     toast(isCorp()
       ? `Signed in as ${user.name}. Corporate view of all ${data.projects.length} projects.`
       : `Signed in as ${user.name}. Showing ${plural(user.projects.length,"project")}.`);
@@ -1386,14 +1451,25 @@ const VIEWS = {
 function render(){ renderNav(); renderMain(); }
 function renderMain(){
   const fn = VIEWS[state.view] || viewToday;
-  $("#main").innerHTML = fn() + `<p class="foot">Project Portal shell v0.3. Sample data for preview only.</p>`;
+  $("#main").innerHTML = fn() + `<p class="foot">Project Portal shell v0.4.2. Sample data for preview only.</p>`;
   if (state.view === "ask") afterAskRender();
 }
 function go(view){
   state.view = view;
   render();
-  window.scrollTo(0,0);
-  $("#main").focus({ preventScroll:true });
+  scrollToTopAndFocusMain();
+}
+
+/* Move focus to the page content for keyboard and screen-reader users WITHOUT
+   letting the browser scroll it under the sticky header, then pin the page to
+   the top. The second scroll on the next frame wins over any late layout. */
+function scrollToTopAndFocusMain(){
+  const main = $("#main");
+  if (main){
+    try { main.focus({ preventScroll:true }); } catch(_) { main.focus(); }
+  }
+  window.scrollTo(0, 0);
+  requestAnimationFrame(() => window.scrollTo(0, 0));
 }
 
 /* ============================================================
@@ -2598,9 +2674,84 @@ document.addEventListener("change", e => {
 });
 
 /* ============================================================
+   BOOT SEQUENCE (mirrors the EG dashboard sign-in)
+   1. Spinner shows for 2.5 s.
+   2. The icon is hidden in the ring and a clone flies from the ring
+      to the login icon slot (0.65 s, same easing as the dashboard).
+   3. On landing: the slot icon appears, the login is revealed at full
+      opacity (same gradient as the spinner, so there is no flash), and
+      the spinner is removed.
+   A safety timer finishes the hand-off if the browser never fires
+   transitionend. With reduced motion, the flight is skipped.
+   ============================================================ */
+const BOOT = { spinnerMs:2500, flightMs:650 };
+
+function runBootSequence(){
+  const spinner = $("#bootSpinner");
+  const login   = $("#loginView");
+  const ringIcon = $("#bootIcon");
+  const slot     = $("#loginIconSlot");
+  const slotIcon = $("#loginIcon");
+  if (!spinner || !login) return;
+
+  const reduceMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  let done = false;
+
+  function finish(){
+    if (done) return;
+    done = true;
+    if (slotIcon) slotIcon.classList.remove("pending");
+    login.classList.remove("handoff");
+    login.removeAttribute("aria-hidden");
+    const fly = $("#flyingIcon");
+    if (fly) fly.remove();
+    spinner.remove();
+  }
+
+  setTimeout(() => {
+    if (reduceMotion || !ringIcon || !slot) { finish(); return; }
+
+    /* Capture the icon’s exact position before anything changes */
+    const start = ringIcon.getBoundingClientRect();
+    if (!start.width || !start.height) { finish(); return; }   // icon blocked or failed to load
+
+    /* Hide the original so only the flying clone is visible */
+    ringIcon.style.opacity = "0";
+
+    const fly = document.createElement("img");
+    fly.id = "flyingIcon";
+    fly.className = "flying-icon";
+    fly.src = ringIcon.src;
+    fly.alt = "";
+    fly.style.top  = start.top + "px";
+    fly.style.left = start.left + "px";
+    document.body.appendChild(fly);
+
+    /* Two frames for layout to settle, then measure the slot and fly */
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const end = slot.getBoundingClientRect();
+        const dx = (end.left + end.width / 2 - 40) - start.left;
+        const dy = (end.top + end.height / 2 - 40) - start.top;
+
+        fly.classList.add("is-flying");
+        fly.addEventListener("transitionend", e => {
+          if (e.propertyName === "transform") finish();
+        });
+        requestAnimationFrame(() => {
+          fly.style.transform = `translate(${dx}px, ${dy}px)`;
+        });
+        setTimeout(finish, BOOT.flightMs + 400);   // safety net
+      });
+    });
+  }, BOOT.spinnerMs);
+}
+
+/* ============================================================
    BOOT
    ============================================================ */
 renderLogin();
+runBootSequence();
 </script>
 </body>
 </html>
