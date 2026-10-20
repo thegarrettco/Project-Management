@@ -2084,10 +2084,10 @@ function viewProject(){
           <div class="metric"><div class="metric-k">Final CO</div><div class="metric-v">${fmtDate(addDays(p.finalCo))}</div></div>
         </div>
         <dl class="kv">
-          <dt>Manpower last night</dt><dd><span class="pill${short ? " warn" : ""}">${p.manpower[0]} of ${p.manpower[1]} planned</span></dd>
-          <dt>Last daily log</dt><dd>${esc(p.lastLog)}</dd>
-          <dt>From the digest</dt><dd>${keepCodesTogether(fillDates(p.flag))}</dd>
-          <dt>Project team</dt><dd>${esc(team)}</dd>
+          <dt>Manpower Last Night</dt><dd><span class="pill${short ? " warn" : ""}">${p.manpower[0]} of ${p.manpower[1]} planned</span></dd>
+          <dt>Last Daily Log</dt><dd>${esc(p.lastLog)}</dd>
+          <dt>From the Digest</dt><dd>${keepCodesTogether(fillDates(p.flag))}</dd>
+          <dt>Project Team</dt><dd>${esc(team)}</dd>
         </dl>
       </section>
       <section class="gallery" id="projGallery" aria-label="DroneDeploy site captures for ${esc(p.name)}">${galleryInner(p.key)}</section>
