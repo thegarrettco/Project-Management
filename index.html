@@ -1,0 +1,2601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TGC Project Portal (Shell)</title>
+
+<!--
+  ============================================================
+  TGC PROJECT PORTAL — SHELL v0.3
+  ============================================================
+  HOW TO PREVIEW
+    Paste this entire file into the w3schools Tryit editor
+    (https://www.w3schools.com/html/tryit.asp?filename=tryhtml_default)
+    and click Run. Everything is inline; nothing to install.
+
+  WHAT CHANGED IN v0.3
+    • Visual formatting returned to v0.1 (titles, panels, tables, buttons,
+      badges, drawer, hero).
+    • Kept from v0.2: corporate (view-only) access, the in-portal Ask Claude
+      chat, the Garrett header (navy + header texture, larger logo, tightened
+      user block with a divider before Sign out), and the body texture.
+
+  WHAT IS REAL vs. SAMPLE
+    • UI, navigation, review drawer, approval flow, chat UI: real shell behavior.
+    • All data (users, projects, drafts, deadlines): SAMPLE ONLY.
+    • Sign-in and Procore write-back: SIMULATED. Nothing is sent anywhere.
+
+  ASK CLAUDE: HOW ANSWERS ARE PRODUCED
+    • "auto" (this shell): tries Claude where the preview environment
+      allows it. Where it doesn’t (for example w3schools, which has no API
+      key), it switches to a clearly labeled demo responder that answers
+      from the sample data with simple rules.
+    • "worker" (production): the browser posts the question to your Worker
+      at /ask. The Worker identifies the user, builds the data context from
+      ONLY that user’s projects, and calls Claude with the API key stored as
+      a Cloudflare secret. The key never reaches the browser.
+
+  w3schools-SAFE BY DESIGN
+    • Single file: CSS + JS inline, no build step, no ES module imports.
+    • No localStorage/sessionStorage (state lives in memory; reload resets).
+    • No URL-hash routing (unreliable inside the Tryit iframe).
+    • Clipboard copy falls back to execCommand inside iframes.
+    • External resources: Google Fonts (Poppins) and your existing
+      Wix-hosted logos and textures, each with a plain-color fallback.
+
+  SECURITY NOTE FOR PRODUCTION
+    • The Worker decides who sees what and who can approve. The client-side
+      checks here (scoping, corporate view-only) mirror that behavior for the
+      preview only. Never rely on them for security.
+  ============================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   TOKENS (brand-matched to the EG Executive Dashboard)
+   ============================================================ */
+:root{
+  --blue:#0070b9;
+  --blue-hover:#005f9e;
+  --navy:#333e4e;
+  --deep:#183752;
+  --gold:#fdb82b;
+
+  --bg:#f8f9fb;
+  --surface:#ffffff;
+  --surface-2:#f3f5f8;
+  --surface-3:#edf5fa;
+  --border:rgba(15,34,52,.10);
+  --border-strong:rgba(15,34,52,.20);
+
+  --text:#1e1e1e;
+  --muted:#5b6575;
+  --heading:#333e4e;
+  --accent-text:#0070b9;
+  --accent-soft:rgba(0,112,185,.08);
+
+  --pos:#0b5d1e;  --pos-soft:#e6f0e8;
+  --neg:#8b0000;  --neg-soft:#f9e6e6;
+  --warn:#7a4f00; --warn-soft:#fff2d9;
+  --badge-bg:#fff2d9; --badge-text:#1e1e1e;
+
+  /* Garrett textures (same Wix assets as the EG dashboard) */
+  --tex-body:url('https://static.wixstatic.com/media/4f7dd4_63f3cd73446e43f6bf97fb94b36ae893~mv2.png');
+  --tex-header:url('https://static.wixstatic.com/media/4f7dd4_d05c939dec47458fa6367dd45bb71018~mv2.png');
+
+  --chrome-bg:linear-gradient(135deg,#204768 0%,#183752 55%,#0f2234 100%);
+  --shadow:0 4px 12px rgba(0,0,0,.05);
+  --shadow-lg:0 24px 60px rgba(0,0,0,.28);
+
+  --chrome-h:108px;   /* topbar 76 + banner 32 */
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0f141b;
+    --surface:#171e27;
+    --surface-2:#1e2732;
+    --surface-3:#1a2b3b;
+    --border:rgba(255,255,255,.08);
+    --border-strong:rgba(255,255,255,.18);
+
+    --text:#e6e9ee;
+    --muted:#9aa5b4;
+    --heading:#f1f4f8;
+    --accent-text:#7cc0f0;
+    --accent-soft:rgba(74,168,232,.13);
+
+    --pos:#7fd49a;  --pos-soft:rgba(127,212,154,.13);
+    --neg:#ff9a9a;  --neg-soft:rgba(255,154,154,.13);
+    --warn:#f5c35a; --warn-soft:rgba(253,184,43,.14);
+    --badge-bg:rgba(253,184,43,.16); --badge-text:#f5c35a;
+
+    /* The body texture is a light-paper image, so it is switched off in dark mode */
+    --tex-body:none;
+
+    --shadow:0 4px 14px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0}
+body{
+  font-family:"Poppins",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  background-color:var(--bg);
+  background-image:var(--tex-body);
+  background-size:auto;
+  background-position:top left;
+  background-repeat:repeat;
+  background-attachment:fixed;
+  color:var(--text);
+  font-size:15px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent-text)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+.login{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:2rem 1rem;background:var(--chrome-bg);
+}
+.login-card{
+  width:100%;max-width:440px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:20px;padding:2.25rem 2rem 2rem;
+  box-shadow:var(--shadow-lg);color:#fff;
+}
+.login-icon{width:72px;height:72px;object-fit:contain;display:block;margin:0 auto 1rem}
+.login h1{margin:0;font-size:1.5rem;font-weight:700;text-align:center}
+.login-sub{margin:.25rem 0 1.5rem;color:rgba(255,255,255,.6);font-size:.85rem;text-align:center}
+.btn-signin{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:.55rem;
+  background:var(--gold);color:#1e1e1e;border:0;border-radius:10px;
+  padding:.85rem 1rem;font-weight:700;font-size:.95rem;cursor:pointer;
+}
+.btn-signin:hover{filter:brightness(.95)}
+.btn-signin svg{width:18px;height:18px}
+.login-divider{
+  display:flex;align-items:center;gap:.75rem;margin:1.5rem 0 .75rem;
+  color:rgba(255,255,255,.45);font-size:.78rem;
+}
+.login-divider::before,.login-divider::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.14)}
+.login-note{font-size:.8rem;color:rgba(255,255,255,.55);margin:0 0 .9rem;text-align:center}
+.user-pick{display:grid;gap:.6rem}
+.user-option{
+  display:flex;align-items:center;gap:.75rem;width:100%;text-align:left;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+  border-radius:12px;padding:.7rem .85rem;color:#fff;cursor:pointer;
+}
+.user-option:hover{border-color:rgba(253,184,43,.5);background:rgba(253,184,43,.10)}
+.user-option[aria-busy="true"]{opacity:.6;cursor:progress}
+.user-option .u-text{display:flex;flex-direction:column;line-height:1.25;gap:.1rem}
+.user-option .u-name{font-weight:600;font-size:.92rem}
+.user-option .u-meta{font-size:.75rem;color:rgba(255,255,255,.6)}
+.login-group{font-size:.74rem;color:rgba(255,255,255,.5);margin:.6rem 0 0}
+.avatar{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  background:var(--gold);color:#1e1e1e;font-weight:700;font-size:.8rem;
+  display:grid;place-items:center;
+}
+.avatar.corp{background:#fff;color:var(--deep)}
+
+/* ============================================================
+   CHROME (Garrett header: navy + header texture)
+   ============================================================ */
+.chrome{position:sticky;top:0;z-index:50;background:var(--bg)}
+.topbar{
+  height:76px;color:#fff;
+  background-color:var(--navy);
+  background-image:var(--tex-header);
+  background-size:cover;background-position:center;background-repeat:no-repeat;
+  display:flex;align-items:center;gap:1rem;padding:0 2rem;
+}
+.brand{display:flex;align-items:center;gap:1rem;min-width:0}
+.brand img{height:40px;width:auto;display:block}
+.brand-fallback{font-weight:700;font-size:.82rem;letter-spacing:.06em;white-space:nowrap}
+.brand-name{font-weight:600;font-size:1.05rem;white-space:nowrap}
+.top-divider{width:1px;height:28px;background:rgba(255,255,255,.25);flex-shrink:0}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:1rem;min-width:0}
+.scope{display:flex;align-items:center;gap:.4rem;min-width:0}
+.scope-label{font-size:.76rem;color:rgba(255,255,255,.65);white-space:nowrap}
+.scope-chip{
+  font-size:.76rem;white-space:nowrap;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+  border-radius:999px;padding:.18rem .62rem;
+}
+.user-box{display:flex;align-items:center;gap:.65rem}
+.user-box .u-text{display:flex;flex-direction:column;justify-content:center;gap:1px;line-height:1.15}
+.user-box .u-name{font-size:.86rem;font-weight:600;white-space:nowrap}
+.user-box .u-role{font-size:.72rem;color:rgba(255,255,255,.65);white-space:nowrap}
+.btn-signout{
+  background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;
+  border-radius:8px;padding:.38rem .8rem;font-size:.8rem;font-weight:500;cursor:pointer;white-space:nowrap;
+}
+.btn-signout:hover{background:rgba(255,255,255,.1)}
+.demo-banner{
+  height:32px;display:flex;align-items:center;justify-content:center;
+  background:var(--warn-soft);color:var(--warn);
+  font-size:.78rem;font-weight:600;border-bottom:1px solid var(--border);
+  padding:0 1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.layout{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:calc(100vh - var(--chrome-h))}
+.sidenav{
+  position:sticky;top:var(--chrome-h);height:calc(100vh - var(--chrome-h));
+  overflow-y:auto;padding:1rem .75rem;
+  background:var(--surface);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;gap:.2rem;
+}
+.nav-item{
+  display:flex;align-items:center;gap:.7rem;width:100%;
+  padding:.62rem .75rem;border:0;border-radius:10px;background:transparent;
+  color:var(--muted);font-size:.9rem;font-weight:500;cursor:pointer;text-align:left;
+}
+.nav-item svg{width:20px;height:20px;flex-shrink:0}
+.nav-item:hover{background:var(--surface-2);color:var(--heading)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent-text);font-weight:600}
+.nav-badge{
+  margin-left:auto;background:var(--gold);color:#1e1e1e;
+  font-size:.72rem;font-weight:700;border-radius:999px;
+  padding:.05rem .5rem;min-width:22px;text-align:center;
+}
+.nav-sep{height:1px;background:var(--border);margin:.6rem .5rem}
+.nav-foot{margin-top:auto;font-size:.72rem;color:var(--muted);padding:.75rem .75rem .25rem;line-height:1.45}
+.main{padding:1.75rem clamp(1rem,3vw,2.25rem) 3rem;min-width:0;outline:none}
+.foot{margin-top:2.5rem;font-size:.74rem;color:var(--muted)}
+
+/* ============================================================
+   PAGE HEADINGS
+   ============================================================ */
+.page-head{margin-bottom:1.5rem}
+.page-head h2{margin:0;font-size:1.75rem;line-height:1.2;color:var(--heading);font-weight:700}
+.page-head p{margin:.35rem 0 0;color:var(--accent-text);font-weight:500;font-size:1rem}
+.section-title{margin:0 0 .85rem;font-size:1.05rem;font-weight:600;color:var(--heading)}
+
+/* Grouping container (no visual treatment of its own) */
+.wrap{display:block}
+
+/* ============================================================
+   TODAY — HERO (the one bold element)
+   ============================================================ */
+.hero{
+  background:var(--chrome-bg);color:#fff;border-radius:18px;
+  padding:1.75rem 1.9rem;margin-bottom:1.5rem;
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1.5rem;align-items:end;
+}
+.hero-count{font-size:3.25rem;font-weight:700;line-height:1;color:var(--gold)}
+.hero-line{font-size:1.25rem;font-weight:600;margin:.4rem 0 .35rem;line-height:1.3}
+.hero-next{font-size:.88rem;color:rgba(255,255,255,.72);margin:0;max-width:62ch}
+.hero-actions{display:flex;flex-direction:column;gap:.5rem;align-items:stretch}
+.hero .btn-gold{background:var(--gold);color:#1e1e1e;border:0}
+.hero .btn-gold:hover{filter:brightness(.95)}
+.hero .btn-ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.3)}
+.hero .btn-ghost:hover{background:rgba(255,255,255,.08)}
+
+.strip{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  margin-bottom:1.5rem;overflow:hidden;
+}
+.strip-item{
+  border:0;background:transparent;text-align:left;cursor:pointer;
+  padding:.95rem 1.15rem;border-right:1px solid var(--border);
+}
+.strip-item:last-child{border-right:0}
+.strip-item:hover{background:var(--surface-2)}
+.strip-value{font-size:1.35rem;font-weight:700;color:var(--heading);line-height:1.2}
+.strip-value.neg{color:var(--neg)}
+.strip-label{font-size:.78rem;color:var(--muted)}
+
+/* ============================================================
+   PANELS / GRID
+   ============================================================ */
+.grid-2{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:1.25rem;margin-bottom:1.5rem}
+.panel{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  box-shadow:var(--shadow);padding:1.25rem 1.35rem;min-width:0;
+}
+.panel-head{display:flex;align-items:baseline;justify-content:space-between;gap:.75rem;margin-bottom:.9rem}
+.panel-head h3{margin:0;font-size:1.05rem;color:var(--heading);font-weight:600}
+.panel-note{font-size:.76rem;color:var(--muted)}
+.badge{
+  background:var(--badge-bg);color:var(--badge-text);font-weight:700;
+  font-size:.74rem;padding:.25rem .55rem;border-radius:8px;white-space:nowrap;
+}
+
+/* Top actions — numbered because it IS a ranked sequence */
+.action-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.action{
+  display:flex;gap:.75rem;align-items:flex-start;width:100%;text-align:left;
+  background:var(--surface-2);border:1px solid transparent;border-radius:12px;
+  padding:.72rem .85rem;cursor:pointer;
+}
+.action:hover{border-color:var(--border-strong)}
+.action-rank{
+  width:24px;height:24px;border-radius:50%;flex-shrink:0;
+  background:var(--blue);color:#fff;font-size:.74rem;font-weight:700;
+  display:grid;place-items:center;margin-top:1px;
+}
+.action-text{font-size:.88rem;font-weight:500;color:var(--text);line-height:1.4}
+.action-meta{display:flex;gap:.5rem;align-items:center;margin-top:.25rem}
+
+/* Level A automation runs */
+.run{display:flex;align-items:center;gap:.75rem;padding:.62rem 0;border-bottom:1px solid var(--border)}
+.run:last-child{border-bottom:0}
+.run-dot{width:10px;height:10px;border-radius:50%;background:var(--pos);flex-shrink:0}
+.run-dot.flag{background:var(--gold)}
+.run-name{font-size:.86rem;font-weight:600;color:var(--heading);line-height:1.3}
+.run-meta{font-size:.74rem;color:var(--muted)}
+.run-right{margin-left:auto;flex-shrink:0}
+
+/* ============================================================
+   PILLS / TAGS
+   ============================================================ */
+.pill{
+  display:inline-flex;align-items:center;gap:.3rem;white-space:nowrap;
+  font-size:.72rem;font-weight:600;padding:.18rem .58rem;border-radius:999px;
+  background:var(--surface-2);color:var(--muted);
+}
+.pill.pos{background:var(--pos-soft);color:var(--pos)}
+.pill.neg{background:var(--neg-soft);color:var(--neg)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.info{background:var(--accent-soft);color:var(--accent-text)}
+.tag{
+  display:inline-block;font-size:.74rem;font-weight:600;
+  color:var(--accent-text);background:var(--accent-soft);
+  padding:.14rem .52rem;border-radius:6px;white-space:nowrap;
+}
+.proj-tag{
+  display:inline-block;font-size:.72rem;font-weight:600;color:var(--heading);
+  background:var(--surface-3);border-radius:6px;padding:.1rem .45rem;white-space:nowrap;
+}
+
+/* ============================================================
+   TABLES
+   ============================================================ */
+.table-wrap{width:100%;overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+table.data{width:100%;border-collapse:collapse;font-size:.86rem;min-width:680px}
+table.data th{
+  text-align:left;font-size:.76rem;font-weight:700;color:var(--heading);
+  background:var(--surface-3);padding:.65rem .85rem;white-space:nowrap;
+  border-bottom:1px solid var(--border);
+}
+table.data td{padding:.68rem .85rem;border-bottom:1px solid var(--border);vertical-align:middle}
+table.data tr:last-child td{border-bottom:0}
+table.data tr.clickable{cursor:pointer}
+table.data tr.clickable:hover td,
+table.data tr.clickable:focus-visible td{background:var(--surface-2)}
+table.data tr.clickable:focus-visible{outline:none}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.strong{font-weight:600;color:var(--heading)}
+.muted{color:var(--muted)}
+.small{font-size:.78rem}
+.bar{height:8px;background:var(--surface-2);border-radius:999px;overflow:hidden;min-width:90px}
+.bar > span{display:block;height:100%;background:var(--blue);border-radius:999px}
+.bar-row{display:flex;align-items:center;gap:.6rem}
+
+/* ============================================================
+   FILTERS / FORM CONTROLS
+   ============================================================ */
+.filters{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;align-items:center}
+.filters-label{font-size:.8rem;color:var(--muted);margin-right:.25rem}
+.chip{
+  border:1px solid var(--border-strong);background:var(--surface);color:var(--muted);
+  border-radius:999px;padding:.35rem .85rem;font-size:.8rem;font-weight:500;cursor:pointer;
+}
+.chip:hover{color:var(--heading)}
+.chip:disabled{opacity:.5;cursor:not-allowed}
+.chip.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.select{
+  border:1px solid var(--border-strong);border-radius:10px;
+  padding:.5rem .8rem;background:var(--surface);font-size:.86rem;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:.45rem;
+  border-radius:10px;padding:.6rem 1rem;font-size:.86rem;font-weight:600;
+  cursor:pointer;border:1px solid transparent;text-decoration:none;white-space:nowrap;
+}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue-hover)}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;background:var(--blue)}
+.btn-secondary{background:var(--surface);color:var(--heading);border-color:var(--border-strong)}
+.btn-secondary:hover{background:var(--surface-2)}
+.btn-danger{background:transparent;color:var(--neg)}
+.btn-danger:hover{background:var(--neg-soft)}
+.btn-sm{padding:.4rem .75rem;font-size:.78rem}
+
+/* ============================================================
+   PROJECT CARDS
+   ============================================================ */
+.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:1.25rem}
+.project-card .panel-head{margin-bottom:0}
+.project-card h3{margin:0;font-size:1.15rem;color:var(--heading)}
+.project-loc{font-size:.82rem;color:var(--muted);margin:.1rem 0 .8rem}
+.project-team{font-size:.78rem;color:var(--muted);margin:.85rem 0 0}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem;margin:1rem 0}
+.metric{background:var(--surface-2);border-radius:10px;padding:.55rem .7rem}
+.metric-k{font-size:.72rem;color:var(--muted);line-height:1.3}
+.metric-v{font-size:.95rem;font-weight:700;color:var(--heading);font-variant-numeric:tabular-nums}
+.metric-v.neg{color:var(--neg)}
+.metric-v.pos{color:var(--pos)}
+.card-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+
+/* ============================================================
+   ASK CLAUDE — CHAT + STARTER PROMPTS
+   ============================================================ */
+.chat{display:flex;flex-direction:column;gap:.9rem}
+.chat-log{
+  min-height:240px;max-height:min(56vh,520px);overflow-y:auto;
+  display:flex;flex-direction:column;gap:.75rem;padding:.2rem .1rem;
+}
+.chat-empty{margin:auto;text-align:center;color:var(--muted);max-width:56ch;font-size:.9rem;padding:1.5rem 0}
+.chat-empty strong{display:block;color:var(--heading);font-size:1rem;margin-bottom:.25rem}
+.msg{max-width:86%;border-radius:14px;padding:.7rem .9rem;font-size:.88rem;line-height:1.6;word-wrap:break-word}
+.msg.user{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px;white-space:pre-wrap}
+.msg.assistant{align-self:flex-start;background:var(--surface-2);border:1px solid var(--border);border-bottom-left-radius:4px}
+.msg.assistant.error{background:var(--neg-soft)}
+.msg-who{font-size:.72rem;font-weight:700;color:var(--accent-text);margin-bottom:.25rem}
+.msg-who.demo{color:var(--warn)}
+.typing{display:inline-flex;gap:4px;align-items:center;margin-left:.35rem}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite ease-in-out}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.chat-suggest{display:flex;flex-wrap:wrap;gap:.5rem}
+.chat-input{display:flex;gap:.6rem;align-items:flex-end}
+.chat-input textarea{
+  flex:1;resize:none;min-height:48px;max-height:160px;
+  border:1px solid var(--border-strong);border-radius:12px;
+  padding:.7rem .9rem;background:var(--surface);font-size:.9rem;line-height:1.45;
+}
+.chat-input textarea:focus{outline:2px solid var(--blue);outline-offset:0;border-color:transparent}
+.chat-note{font-size:.76rem;color:var(--muted);margin:0}
+.callout{
+  background:var(--accent-soft);border:1px solid var(--border);border-radius:12px;
+  padding:1rem 1.15rem;font-size:.88rem;margin-bottom:1.25rem;max-width:78ch;
+}
+.callout p{margin:0}
+.callout p + p{margin-top:.5rem}
+.prompt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.25rem}
+.prompt-card{display:flex;flex-direction:column;gap:.75rem}
+.prompt-card .panel-head{margin-bottom:0}
+.prompt-card h3{margin:0;font-size:1rem;color:var(--heading)}
+.prompt-text{
+  font-size:.84rem;line-height:1.6;background:var(--surface-2);border-radius:10px;
+  padding:.8rem .9rem;white-space:pre-wrap;flex:1;
+}
+.prompt-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+
+/* ============================================================
+   ACTIVITY STATS / CONNECTIONS
+   ============================================================ */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin-bottom:1.25rem}
+.stat{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  box-shadow:var(--shadow);padding:1.25rem 1.35rem;
+}
+.stat-v{font-size:1.5rem;font-weight:700;color:var(--heading);line-height:1.2}
+.stat-k{font-size:.78rem;color:var(--muted)}
+.conn-list{display:flex;flex-direction:column;gap:.75rem;max-width:900px}
+.conn{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1rem;align-items:center}
+.conn-name{font-weight:600;color:var(--heading)}
+.conn-use{font-size:.8rem;color:var(--muted)}
+.conn-detail{font-size:.84rem;margin-top:.35rem}
+.conn-right{display:flex;flex-direction:column;align-items:flex-end;gap:.45rem}
+
+/* ============================================================
+   REVIEW DRAWER
+   ============================================================ */
+.scrim{
+  position:fixed;inset:0;background:rgba(15,34,52,.45);z-index:80;
+  opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s;
+}
+.scrim.open{opacity:1;visibility:visible}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(620px,100%);
+  background:var(--surface);z-index:90;box-shadow:var(--shadow-lg);
+  display:flex;flex-direction:column;
+  transform:translateX(100%);visibility:hidden;
+  transition:transform .25s ease,visibility .25s;
+}
+.drawer.open{transform:none;visibility:visible}
+.drawer-head{padding:1.15rem 1.4rem 1rem;border-bottom:1px solid var(--border)}
+.drawer-tags{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+.icon-btn{
+  margin-left:auto;width:34px;height:34px;border-radius:8px;cursor:pointer;
+  border:1px solid var(--border-strong);background:var(--surface);color:var(--heading);
+  display:grid;place-items:center;font-size:1.15rem;line-height:1;
+}
+.icon-btn:hover{background:var(--surface-2)}
+.drawer-title{margin:.7rem 0 .25rem;font-size:1.2rem;line-height:1.3;color:var(--heading);outline:none}
+.drawer-sub{font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:.35rem .9rem}
+.drawer-body{flex:1;overflow-y:auto;padding:1.2rem 1.4rem;display:flex;flex-direction:column;gap:1.35rem}
+.block-title{margin:0 0 .55rem;font-size:.86rem;font-weight:600;color:var(--heading);display:flex;align-items:center;gap:.6rem}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
+.field{background:var(--surface-2);border-radius:10px;padding:.55rem .75rem}
+.field .k{font-size:.72rem;color:var(--muted)}
+.field .v{font-size:.88rem;font-weight:600;color:var(--heading);word-break:break-word}
+textarea.draft{
+  width:100%;min-height:270px;resize:vertical;
+  border:1px solid var(--border-strong);border-radius:10px;
+  padding:.85rem .95rem;background:var(--surface);
+  font-size:.85rem;line-height:1.6;
+}
+textarea.draft:disabled{background:var(--surface-2);color:var(--muted)}
+.edited-flag{font-size:.74rem;font-weight:600;color:var(--warn)}
+.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.check{display:flex;gap:.6rem;align-items:flex-start;font-size:.86rem;line-height:1.45}
+.check-ic{
+  width:20px;height:20px;border-radius:50%;flex-shrink:0;margin-top:1px;
+  display:grid;place-items:center;font-size:.72rem;font-weight:800;
+}
+.check-ic.ok{background:var(--pos-soft);color:var(--pos)}
+.check-ic.warn{background:var(--warn-soft);color:var(--warn)}
+.check-ic.fail{background:var(--neg-soft);color:var(--neg)}
+.sources{display:flex;flex-direction:column;gap:.4rem}
+.source{display:flex;align-items:center;gap:.7rem;font-size:.84rem;padding:.5rem .7rem;border:1px solid var(--border);border-radius:10px}
+.src-kind{font-size:.72rem;font-weight:700;color:var(--accent-text);min-width:84px}
+.verify{border:1px solid rgba(253,184,43,.6);background:var(--warn-soft);border-radius:12px;padding:.95rem 1.05rem}
+.verify p{margin:0 0 .5rem;font-size:.82rem;color:var(--text)}
+.verify label{display:flex;gap:.6rem;align-items:flex-start;font-size:.86rem;margin-top:.45rem;cursor:pointer}
+.verify input{margin-top:.22rem;width:16px;height:16px;accent-color:var(--blue);flex-shrink:0}
+.status-note{border-radius:12px;padding:.9rem 1rem;font-size:.86rem}
+.status-note.info{background:var(--accent-soft)}
+.status-note.neg{background:var(--neg-soft);color:var(--text)}
+.pipeline{display:flex;flex-direction:column;gap:.6rem}
+.step{display:flex;align-items:center;gap:.7rem;font-size:.87rem}
+.step-dot{
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;
+  border:2px solid var(--border-strong);display:grid;place-items:center;
+  font-size:.7rem;font-weight:800;
+}
+.step.done .step-dot{background:var(--pos);border-color:var(--pos);color:var(--surface)}
+.step.active .step-dot{border-color:var(--blue);border-top-color:transparent;animation:spin .8s linear infinite}
+.step-note{font-size:.76rem;color:var(--muted);margin-left:auto;text-align:right}
+@keyframes spin{to{transform:rotate(360deg)}}
+.drawer-foot{border-top:1px solid var(--border);padding:.9rem 1.4rem 1rem;display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;background:var(--surface)}
+.drawer-foot .spacer{flex:1}
+.foot-hint{width:100%;font-size:.75rem;color:var(--muted);margin:0}
+.note-box{width:100%;display:flex;flex-direction:column;gap:.55rem}
+.note-box label{font-size:.84rem;font-weight:600;color:var(--heading)}
+.note-box textarea{
+  width:100%;min-height:84px;resize:vertical;border:1px solid var(--border-strong);
+  border-radius:10px;padding:.65rem .8rem;background:var(--surface);font-size:.86rem;
+}
+.note-actions{display:flex;gap:.5rem;justify-content:flex-end}
+
+/* ============================================================
+   TOASTS / EMPTY STATES
+   ============================================================ */
+.toast-host{
+  position:fixed;bottom:1.25rem;left:50%;transform:translateX(-50%);z-index:120;
+  display:flex;flex-direction:column;gap:.5rem;align-items:center;
+  pointer-events:none;width:min(92vw,500px);
+}
+.toast{
+  width:100%;background:var(--deep);color:#fff;border-radius:12px;
+  padding:.72rem 1rem;font-size:.84rem;box-shadow:var(--shadow-lg);
+  border-left:4px solid var(--gold);animation:toastIn .22s ease;
+}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.empty{
+  border:1px dashed var(--border-strong);border-radius:14px;padding:2rem;
+  text-align:center;color:var(--muted);font-size:.9rem;background:var(--surface);
+}
+.empty strong{display:block;color:var(--heading);font-size:1rem;margin-bottom:.25rem}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width:1150px){
+  .scope,.scope-divider{display:none}
+  .grid-2{grid-template-columns:1fr}
+}
+@media (max-width:900px){
+  :root{--chrome-h:96px}
+  .topbar{height:64px;padding:0 1rem;gap:.75rem}
+  .top-right{gap:.75rem}
+  .brand img{height:30px}
+  .brand-divider{display:none}
+  .user-box .u-text{display:none}
+  .demo-banner{font-size:.7rem}
+  .layout{grid-template-columns:1fr}
+  .sidenav{
+    top:var(--chrome-h);height:auto;z-index:40;flex-direction:row;
+    overflow-x:auto;border-right:0;border-bottom:1px solid var(--border);
+    padding:.5rem;gap:.3rem;
+  }
+  .nav-item{width:auto;flex-shrink:0;padding:.5rem .75rem;font-size:.82rem}
+  .nav-item svg{width:18px;height:18px}
+  .nav-sep,.nav-foot{display:none}
+  .hero{grid-template-columns:1fr;padding:1.4rem}
+  .hero-count{font-size:2.6rem}
+  .strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .strip-item:nth-child(2){border-right:0}
+  .strip-item:nth-child(-n+2){border-bottom:1px solid var(--border)}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fields{grid-template-columns:1fr}
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .page-head h2{font-size:1.45rem}
+  .conn{grid-template-columns:1fr}
+  .conn-right{align-items:flex-start;flex-direction:row}
+  .msg{max-width:94%}
+}
+@media (max-width:520px){
+  .brand-name{display:none}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+
+<body>
+
+<!-- ============================================================
+     LOGIN VIEW
+     ============================================================ -->
+<div id="loginView" class="login">
+  <div class="login-card">
+    <img class="login-icon"
+         src="https://static.wixstatic.com/shapes/4f7dd4_5f4c5be1aff84f318665f8bffa785018.svg"
+         alt="" onerror="this.style.display='none'">
+    <h1>Project Management Portal</h1>
+    <p class="login-sub">The Garrett Companies | Authorized Access Only</p>
+
+    <button type="button" class="btn-signin" data-action="ms-signin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      Sign in with Microsoft
+    </button>
+
+    <div class="login-divider">Demo sign-in</div>
+    <p class="login-note">Choose a sample user. Project users see only their projects. Corporate sees every project, view only.</p>
+    <div class="user-pick" id="userPick"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     APP SHELL
+     ============================================================ -->
+<div id="shellView" hidden>
+  <div class="chrome">
+    <header class="topbar">
+      <div class="brand">
+        <img id="brandLogo"
+             src="https://static.wixstatic.com/media/4f7dd4_2baa0e2530394de3af14df33ce1cdfe9~mv2.png"
+             alt="The Garrett Companies"
+             onerror="this.style.display='none';document.getElementById('brandFallback').hidden=false;">
+        <span id="brandFallback" class="brand-fallback" hidden>THE GARRETT COMPANIES</span>
+        <span class="top-divider brand-divider" aria-hidden="true"></span>
+        <span class="brand-name">Project Management Portal</span>
+      </div>
+
+      <div class="top-right">
+        <div class="scope" id="scopeChips" aria-label="Your access"></div>
+        <span class="top-divider scope-divider" aria-hidden="true"></span>
+        <div class="user-box">
+          <span class="avatar" id="userAvatar" aria-hidden="true"></span>
+          <span class="u-text">
+            <span class="u-name" id="userName"></span>
+            <span class="u-role" id="userRole"></span>
+          </span>
+        </div>
+        <span class="top-divider" aria-hidden="true"></span>
+        <button type="button" class="btn-signout" data-action="signout">Sign out</button>
+      </div>
+    </header>
+    <div class="demo-banner" role="note">Demo shell with sample data. Nothing is sent to Procore, Sage or Microsoft 365.</div>
+  </div>
+
+  <div class="layout">
+    <nav class="sidenav" id="sidenav" aria-label="Primary"></nav>
+    <main class="main" id="main" tabindex="-1"></main>
+  </div>
+</div>
+
+<!-- ============================================================
+     REVIEW DRAWER
+     ============================================================ -->
+<div class="scrim" id="scrim" data-action="close-drawer"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" aria-hidden="true">
+  <div class="drawer-head" id="drawerHead"></div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-foot" id="drawerFoot"></div>
+</aside>
+
+<div class="toast-host" id="toastHost" aria-live="polite"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   CONFIG
+   ============================================================ */
+const CONFIG = {
+  apiMode: "mock",                                   // "mock" now; "live" once the Worker API exists
+  apiBase: "https://YOUR-WORKER.workers.dev/api",    // placeholder, unused in mock mode
+  askMode: "auto",                                   // "auto" in this shell; "worker" in production (see header notes)
+  claudeModel: "claude-sonnet-4-6",                  // used only for the in-preview direct call
+  approvalFrictionThreshold: 25000,                  // items at or above this need explicit confirmations
+  dashboardUrl: "https://thegarrettco.github.io/EG-Executive-Dashboard/",  // confirm before go-live
+  claudeUrl: "https://claude.ai/new"
+};
+
+/* ============================================================
+   SAMPLE DATA — replace with Worker API responses
+   Dates are stored as day offsets from today so the shell
+   always looks current. Tokens like {d-6} or {d+9} inside text
+   are converted to real dates at render time.
+   access: "project"   = sees assigned projects, approves drafts
+           "corporate" = sees every project, view only
+   ============================================================ */
+const USERS = [
+  { id:"u1", name:"Markus Kluga",    initials:"MK", role:"Project Manager",        email:"jordan.lee@example.com",    access:"project",   projects:["fillmore","parkerii"] },
+  { id:"u2", name:"Grace Wilczewski",     initials:"GW", role:"Assistant Project Manager", email:"sam.patel@example.com",     access:"project",   projects:["knoxville","forumii","uptowncommons"] },
+  { id:"u3", name:"Rylin Flick", initials:"RF", role:"Project Engineer",        email:"taylor.brooks@example.com", access:"project",   projects:["emblemmesa"] },
+  { id:"u4", name:"Eric Garrett",  initials:"EG", role:"Chief Executive Officer",   email:"morgan.ellis@example.com",  access:"corporate", projects:[] }
+];
+
+const PROJECTS = {
+  fillmore:      { name:"Fillmore",       location:"Colorado Springs, CO", phase:"Vertical construction",   pct:58, cac:41850000, cacDelta:62400,  sched:4,  openRfis:7,  agedRfis:2, overdueSubmittals:1, exposure:186500, finalCo:410, manpower:[86,94],   lastLog:"6:12 PM yesterday", flag:"Framing crew 8 short of plan at Building 4" },
+  parkerii:      { name:"Parker II",      location:"Parker, CO",           phase:"Interiors",               pct:72, cac:52300000, cacDelta:-18200, sched:0,  openRfis:4,  agedRfis:1, overdueSubmittals:0, exposure:94200,  finalCo:220, manpower:[112,108], lastLog:"5:48 PM yesterday", flag:"Drywall inspection passed at Building 2" },
+  knoxville:     { name:"Knoxville",      location:"Knoxville, TN",        phase:"Framing and MEP rough-in",pct:41, cac:47900000, cacDelta:138000, sched:9,  openRfis:11, agedRfis:4, overdueSubmittals:3, exposure:412000, finalCo:520, manpower:[64,80],   lastLog:"6:31 PM yesterday", flag:"Pay App #6 bills ahead of logged progress at Building 3" },
+  forumii:       { name:"Forum II",       location:"Fort Myers, FL",       phase:"Exterior envelope",       pct:88, cac:38600000, cacDelta:9800,   sched:3,  openRfis:2,  agedRfis:0, overdueSubmittals:1, exposure:48700,  finalCo:95,  manpower:[52,55],   lastLog:"5:57 PM yesterday", flag:"Three weather days logged; notice window closes in 2 days" },
+  uptowncommons: { name:"Uptown Commons", location:"Chandler, AZ",         phase:"Closeout",                pct:95, cac:44100000, cacDelta:0,      sched:-2, openRfis:1,  agedRfis:0, overdueSubmittals:0, exposure:22300,  finalCo:40,  manpower:[38,40],   lastLog:"6:05 PM yesterday", flag:"Building 5 punch walk set for {d+2}" },
+  emblemmesa:    { name:"Emblem Mesa",    location:"Mesa, AZ",             phase:"Interiors and site",      pct:83, cac:45256395, cacDelta:3060,   sched:0,  openRfis:3,  agedRfis:1, overdueSubmittals:0, exposure:61500,  finalCo:130, manpower:[70,72],   lastLog:"6:20 PM yesterday", flag:"Debris cleanup back charge evidence assembled" }
+};
+
+/* Level B drafts (plus one Level A write-back item) prepared by Claude */
+const QUEUE = [
+  {
+    id:"q1", project:"fillmore", type:"Change order", sop:"8.3.11", level:"B",
+    title:"Additional over-excavation at the Building 4 pad",
+    prepared:"5:41 AM", amount:38420,
+    fields:[
+      ["Subcontractor","Front Range Earthworks"],
+      ["Commitment","SC-0112"],
+      ["Cost code","02-2300 Earthwork"],
+      ["Amount","$38,420.00"],
+      ["Basis","Time and materials, 3 field tickets"],
+      ["Schedule impact","None claimed"]
+    ],
+    checks:[
+      ["ok","Import fill rate matches Subcontract Exhibit B ($24.50/CY)."],
+      ["ok","No overlap with prior change orders on this commitment (CO-003, CO-007)."],
+      ["warn","Field ticket FT-2236 is missing the superintendent’s signature."],
+      ["warn","Equipment hours on FT-2231 exceed the daily log by 1.5 hours ($465.00)."]
+    ],
+    sources:[
+      ["Procore","Field tickets FT-2231, FT-2234 and FT-2236"],
+      ["Outlook","Email thread “Bldg 4 soft soils” (6 messages)"],
+      ["SharePoint","Subcontract SC-0112, Exhibit B unit rates"],
+      ["Procore","Daily logs {d-7} to {d-5}"]
+    ],
+    verify:[
+      "Amount and cost code are correct",
+      "Unsigned field ticket FT-2236 is resolved or accepted",
+      "Scope is not already covered by the base subcontract"
+    ],
+    body:
+`CHANGE ORDER (DRAFT, SOP 8.3.11)
+Project: Fillmore
+Subcontractor: Front Range Earthworks, Commitment SC-0112
+Cost code: 02-2300 Earthwork
+
+Description of change
+Over-excavation and replacement of unsuitable soils at the Building 4 pad, per the geotechnical engineer’s field direction on {d-7}. Work performed on a time-and-materials basis.
+
+Pricing basis
+• Import structural fill: 1,180 CY × $24.50/CY = $28,910.00 (Exhibit B rate)
+• Excavator with operator: 22.5 hrs × $310.00/hr = $6,975.00
+• Haul-off of unsuitable material: $2,535.00 lump sum (FT-2236)
+Total: $38,420.00
+
+Schedule impact
+None claimed. The Building 4 slab pour remains on {d+9}.`
+  },
+  {
+    id:"q2", project:"parkerii", type:"RFI", sop:"8.5.02", level:"B",
+    title:"Header conflict with supply duct at Unit B2",
+    prepared:"5:44 AM", amount:null,
+    fields:[
+      ["To","Architect of record"],
+      ["Drawings","A-301 Rev 4, M-201 Rev 4"],
+      ["Spec section","06 10 00 Rough Carpentry"],
+      ["Response requested","5 business days"]
+    ],
+    checks:[
+      ["ok","Conflict confirmed on the current sheet set (Rev 4)."],
+      ["ok","No existing RFI covers this location."],
+      ["warn","If unanswered past 5 days, Building B drywall start slips about 3 days."]
+    ],
+    sources:[
+      ["Procore","Superintendent daily log note, {d-1}"],
+      ["Procore","Drawings A-301 and M-201, Rev 4"],
+      ["SharePoint","Project manual, Section 06 10 00"]
+    ],
+    verify:[],
+    body:
+`RFI (DRAFT, SOP 8.5.02)
+Project: Parker II
+To: Architect of record
+References: A-301 Rev 4, M-201 Rev 4, Spec 06 10 00
+
+Question
+At Unit B2, the 3-ply LVL header shown over the kitchen opening on A-301 conflicts with the 14" × 8" supply duct routed through the same bay on M-201. The duct cannot pass below the header without dropping the soffit below the 8'-0" ceiling height on the finish schedule.
+
+Proposed solution
+Reroute the supply duct one bay east through the open web of the floor truss at grid C/4, as field-verified by the mechanical subcontractor. No change to the header or ceiling height.
+
+Schedule impact if unanswered within 5 business days
+Building B drywall start ({d+8}) slips approximately 3 days.`
+  },
+  {
+    id:"q3", project:"knoxville", type:"Pay app review", sop:"8.1.13", level:"B",
+    title:"Summit Interior Systems, Pay App #6",
+    prepared:"5:52 AM", amount:142880,
+    fields:[
+      ["Requested","$142,880.00"],
+      ["Recommended","$128,300.00"],
+      ["Adjustment","($14,580.00)"],
+      ["Retainage","10%, applied after adjustment"],
+      ["Lien waiver, Pay App #5","Not received"],
+      ["Recommendation","Adjust and hold release"]
+    ],
+    checks:[
+      ["ok","Schedule of values matches the approved SOV, including CO-004."],
+      ["ok","Certificate of insurance is current through 3/31/2027."],
+      ["fail","Conditional lien waiver for Pay App #5 has not been received."],
+      ["warn","Building 3 drywall billed at 70%; daily logs and the {d-3} site capture support about 55%."]
+    ],
+    sources:[
+      ["Procore","Pay App #6 and approved SOV"],
+      ["Procore","Daily logs {d-6} to {d-1}"],
+      ["DroneDeploy","Site capture, {d-3}"],
+      ["Sage","AP history for this commitment"]
+    ],
+    verify:[
+      "Recommended amount reflects the Building 3 adjustment",
+      "Holding release for the missing lien waiver is appropriate"
+    ],
+    body:
+`PAY APP REVIEW (DRAFT, SOP 8.1.13)
+Project: Knoxville
+Subcontractor: Summit Interior Systems, Pay App #6
+
+Recommendation
+Adjust. Approve $128,300.00 and hold release until the Pay App #5 lien waiver is received. Amounts are before 10% retainage.
+
+Reconciliation
+Approved SOV (including CO-004): $1,284,000.00
+Previously billed: $642,000.00
+Requested this period: $142,880.00
+
+Exceptions
+1. Building 3 drywall (SOV line 3.2, $97,200.00) is billed at 70% complete. Daily logs and the {d-3} site capture support about 55%. Adjustment: $97,200.00 × 15% = $14,580.00.
+2. The conditional lien waiver for Pay App #5 has not been received.
+
+Cleared
+SOV values match. COI is current. No duplicate billing against CO-004.`
+  },
+  {
+    id:"q4", project:"forumii", type:"Delay notice", sop:"8.3.14", level:"B",
+    title:"Weather delay notice for 3 lost days",
+    prepared:"5:47 AM", amount:null,
+    fields:[
+      ["To","Owner’s representative"],
+      ["Contract clause","Prime Contract § 8.3, Delays and Extensions of Time"],
+      ["Notice deadline","{d+2}"],
+      ["Days requested","3 calendar days"]
+    ],
+    checks:[
+      ["ok","Lost days match the daily logs and recorded rainfall."],
+      ["ok","Within the contract notice window, with 2 days remaining."],
+      ["ok","Supporting daily reports are attached."]
+    ],
+    sources:[
+      ["Procore","Daily logs {d-7} to {d-5}"],
+      ["SharePoint","Prime contract, § 8.3"],
+      ["SmartPM","Critical path fragment, current model"]
+    ],
+    verify:[],
+    body:
+`NOTICE OF DELAY (DRAFT, SOP 8.3.14)
+Project: Forum II
+To: Owner’s representative
+Contract reference: Prime Contract § 8.3, Delays and Extensions of Time
+
+This letter provides notice of a delay to the Work caused by adverse weather on {d-7}, {d-6} and {d-5}. Recorded rainfall on each date exceeded the threshold for exterior work, and no exterior work was performed, as documented in the attached daily reports.
+
+The delay affects the critical path through roofing and the exterior envelope at Buildings 3 and 4. We request an extension of the Contract Time of three (3) calendar days, with Final Completion adjusted accordingly.
+
+Supporting documentation
+• Daily reports for {d-7} through {d-5}
+• Recorded rainfall summary
+• Schedule fragment showing the critical path impact`
+  },
+  {
+    id:"q5", project:"uptowncommons", type:"Meeting minutes", sop:"8.2.05", level:"B",
+    title:"OAC meeting minutes, {d-1}",
+    prepared:"6:02 AM", amount:null,
+    fields:[
+      ["Meeting","Owner / Architect / Contractor"],
+      ["Decisions","3"],
+      ["Action items","7, all with owner and due date"],
+      ["Carried forward","4"]
+    ],
+    checks:[
+      ["ok","Every action item has an owner and a due date."],
+      ["ok","Open items from the prior meeting are carried forward."],
+      ["warn","The owner’s comment on the pool deck finish was unclear in the transcript. Confirm before sending."]
+    ],
+    sources:[
+      ["Teams","Meeting transcript, {d-1}"],
+      ["Procore","Prior meeting minutes and open items"]
+    ],
+    verify:[],
+    body:
+`MEETING MINUTES (DRAFT, SOP 8.2.05)
+Uptown Commons, OAC meeting, {d-1}
+
+Decisions
+1. Owner approved the alternate pool deck coating (submittal 09 96 00-03).
+2. Building 5 punch walk confirmed for {d+2} at 9:00 AM.
+3. Final landscape inspection will be requested once irrigation is commissioned.
+
+Action items
+• Submit revised pool deck color sample. Pool subcontractor, {d+3}
+• Issue the Building 5 punch list to subs within 24 hours of the walk. APM, {d+3}
+• Confirm the irrigation commissioning date. Landscape subcontractor, {d+4}
+• Provide the updated closeout document log. PE, {d+5}
+• Schedule the fire alarm final with the city. Superintendent, {d+6}
+• Circulate the retainage release checklist. PM, {d+7}
+• Send the revised O&M manual index to the owner. PE, {d+9}
+
+Carried forward
+• Monument sign permit with the city
+• Leasing office millwork touch-up
+• Gate operator warranty letter
+• Owner request for additional attic stock`
+  },
+  {
+    id:"q6", project:"emblemmesa", type:"Back charge", sop:"8.3.15", level:"B",
+    title:"Debris cleanup at Buildings 6 and 7",
+    prepared:"5:58 AM", amount:6850,
+    fields:[
+      ["Subcontractor","Desert Line Framing"],
+      ["Contract clause","Subcontract § 12, Cleanup"],
+      ["Notice sent","Cure notice {d-20}, no response"],
+      ["Amount","$6,850.00"]
+    ],
+    checks:[
+      ["ok","Cure notice was sent within the contract timeline."],
+      ["ok","Photo sets are tied to daily log dates."],
+      ["warn","One photo set is missing location tags."]
+    ],
+    sources:[
+      ["SharePoint","Cure notice dated {d-20}"],
+      ["Procore","Daily logs {d-19} to {d-15}"],
+      ["Procore","Photos (14), Buildings 6 and 7"]
+    ],
+    verify:[],
+    body:
+`BACK CHARGE NOTICE (DRAFT, SOP 8.3.15)
+Project: Emblem Mesa
+To: Desert Line Framing
+Subcontract reference: § 12, Cleanup
+
+Desert Line Framing did not remove framing debris from Buildings 6 and 7 after written notice on {d-20} requiring cleanup within 72 hours. TGC performed the cleanup and is back-charging the cost as permitted under § 12.
+
+Cost
+• Labor: 46 hrs × $95.00/hr = $4,370.00
+• Dumpsters: 2 × $1,240.00 = $2,480.00
+Total back charge: $6,850.00
+
+Supporting documentation
+• Cure notice dated {d-20}
+• Daily reports {d-19} through {d-15}
+• Photo sets (14 photos) tied to daily log dates`
+  },
+  {
+    id:"q7", project:"knoxville", type:"Change event", sop:"8.3.10", level:"A",
+    title:"Firestopping at rated corridor penetrations",
+    prepared:"6:04 AM", amount:12400,
+    fields:[
+      ["Origin","Committee Request #31"],
+      ["Estimated exposure","$12,400.00"],
+      ["Cost code","07-8400 Firestopping"],
+      ["Status","Open, awaiting sub pricing"]
+    ],
+    checks:[
+      ["ok","Matches the scope described in Committee Request #31."],
+      ["ok","No existing change event covers these penetrations."]
+    ],
+    sources:[
+      ["Procore","Committee Request #31"],
+      ["Outlook","Fire marshal comment letter, {d-4}"]
+    ],
+    verify:[],
+    body:
+`CHANGE EVENT (DRAFT, SOP 8.3.10)
+Project: Knoxville
+Origin: Construction Committee Request #31
+
+Scope
+Add firestopping at rated corridor penetrations in Buildings 1 through 3 not shown on the original life-safety plan, per the fire marshal’s comment letter dated {d-4}.
+
+Estimated exposure: $12,400.00 (pending subcontractor pricing)
+Cost code: 07-8400 Firestopping
+Status: Open, awaiting pricing`
+  }
+];
+
+/* Deadlines tracked by the portal (offset = days from today; negative = overdue) */
+const DEADLINES = [
+  { project:"knoxville",     type:"RFI",       offset:-1, title:"RFI #088 response overdue from the MEP engineer", source:"Procore" },
+  { project:"fillmore",      type:"RFI",       offset:0,  title:"RFI #041 with the architect for 9 days",           source:"Procore" },
+  { project:"forumii",       type:"Notice",    offset:2,  title:"Weather delay notice due to the owner",            source:"Prime contract" },
+  { project:"parkerii",      type:"Submittal", offset:3,  title:"Window package submittal review due",              source:"Procore" },
+  { project:"emblemmesa",    type:"Submittal", offset:4,  title:"Site lighting fixture submittal review due",       source:"Procore" },
+  { project:"knoxville",     type:"Notice",    offset:5,  title:"Cure notice response due from Peak Mechanical",    source:"Subcontract" },
+  { project:"forumii",       type:"Insurance", offset:6,  title:"Gulf Coast Roofing umbrella policy expires",       source:"COI log" },
+  { project:"uptowncommons", type:"Closeout",  offset:9,  title:"Retainage release checklist due",                  source:"SharePoint" },
+  { project:"fillmore",      type:"Insurance", offset:12, title:"Front Range Earthworks general liability expires", source:"COI log" },
+  { project:"emblemmesa",    type:"Bond",      offset:21, title:"Performance bond release milestone",               source:"Bond tracker" }
+];
+
+/* Ranked cross-project actions from the overnight digest (project users only). link: queue id or "view:<name>" */
+const ACTIONS = [
+  { project:"forumii",       text:"Send the weather delay notice. The contract window closes in 2 days.",            link:"q4" },
+  { project:"knoxville",     text:"Hold $14,580 on Summit Interior Pay App #6 until the lien waiver arrives.",        link:"q3" },
+  { project:"fillmore",      text:"Approve the Building 4 over-excavation change order after resolving FT-2236.",   link:"q1" },
+  { project:"knoxville",     text:"RFI #088 is overdue from the MEP engineer. Follow up today.",                    link:"view:deadlines" },
+  { project:"parkerii",      text:"Issue the Unit B2 header RFI before Building B drywall starts.",                 link:"q2" },
+  { project:"fillmore",      text:"The Building 4 framing crew is 8 short of plan. Call the superintendent.",       link:"view:projects" },
+  { project:"uptowncommons", text:"Review the OAC minutes and confirm the pool deck comment before sending.",        link:"q5" },
+  { project:"emblemmesa",    text:"Approve the $6,850 debris cleanup back charge against Desert Line Framing.",     link:"q6" },
+  { project:"emblemmesa",    text:"The performance bond release milestone is in 3 weeks. Confirm closeout items.",  link:"view:deadlines" },
+  { project:"parkerii",      text:"Cost at Complete is down $18,200 from last month on cabinet buyout savings.",    link:"view:projects" }
+];
+
+/* Level A runs. flags are per project so totals respect each user’s scope. */
+const AUTOMATIONS = [
+  { name:"Daily field report digest",         sop:"8.7.13",          time:"5:30 AM", flags:{ fillmore:1, knoxville:1, forumii:1 } },
+  { name:"RFI and submittal aging",           sop:"8.5.02",          time:"5:34 AM", flags:{ fillmore:1, knoxville:2, emblemmesa:1 } },
+  { name:"COI and bond expiration scan",      sop:"8.3.09, 8.3.18",  time:"5:36 AM", flags:{ fillmore:1, forumii:1, emblemmesa:1 } },
+  { name:"Invoice to commitment matching",    sop:"8.1.11",          time:"5:38 AM", flags:{ knoxville:1 } },
+  { name:"General Conditions and SWPPP burn", sop:"8.4.02, 8.4.03",  time:"5:40 AM", flags:{} }
+];
+
+const ACTIVITY = [
+  { when:"Yesterday 4:12 PM",  actor:"Jordan Lee",    action:"Approved",            item:"RFI #041, Stair 2 guardrail height",       project:"fillmore",      ref:"RFI #041",              edited:false },
+  { when:"Yesterday 3:48 PM",  actor:"Sam Patel",     action:"Approved",            item:"Submittal review, hollow metal frames",    project:"knoxville",     ref:"Submittal 08 11 13-02", edited:false },
+  { when:"Yesterday 2:30 PM",  actor:"Jordan Lee",    action:"Approved with edits", item:"CO-009, unit cabinet hardware upgrade",    project:"parkerii",      ref:"CCO-009",               edited:true  },
+  { when:"Yesterday 1:15 PM",  actor:"Sam Patel",     action:"Returned to Claude",  item:"Back charge, roofing debris",              project:"forumii",       ref:"Revision requested",    edited:false },
+  { when:"Yesterday 11:02 AM", actor:"Taylor Brooks", action:"Approved",            item:"Pay App #9, Desert Line Framing",          project:"emblemmesa",    ref:"Pay App #9",            edited:false },
+  { when:"Yesterday 6:05 AM",  actor:"Claude",        action:"Prepared",            item:"Weekly OAC agenda",                        project:"fillmore",      ref:"Draft",                 edited:false },
+  { when:"Yesterday 5:40 AM",  actor:"Claude",        action:"Automated",           item:"Punch assignee check, 3 items unassigned", project:"uptowncommons", ref:"Flag raised",           edited:false },
+  { when:"Yesterday 5:30 AM",  actor:"Claude",        action:"Automated",           item:"Daily field report digest",                project:"emblemmesa",    ref:"Digest",                edited:false }
+];
+
+/* Starter prompts for longer work in Claude itself (from the PE / APM guide, Section 3) */
+const PROMPTS = [
+  { title:"Daily digest",        sop:"8.7.13", text:(p,all)=>`For ${all}, read yesterday’s superintendent daily reports. Give me one page per job: work completed, manpower by trade vs. plan, delays and causes, safety or inspection items, and anything that threatens the schedule. Put a top-5 action list across all jobs at the top.` },
+  { title:"Change order draft",  sop:"8.3.11", text:(p)=>`Using the attached field tickets and the email thread with [Sub] on ${p}, draft a change order per SOP 8.3.11. Check pricing against the unit rates in their subcontract and against prior COs on this job. List anything that looks out of scope, duplicated or unsupported. When it’s ready, submit it to my approval queue.` },
+  { title:"Pay app review",      sop:"8.1.13", text:(p)=>`Review [Sub]’s pay app #[n] for ${p}. Reconcile against the approved SOV, prior billings, approved COs, retainage terms, lien waiver status and COI status. Compare % complete to the latest daily logs and site captures. Return an exceptions list and a recommended approve / hold / adjust amount.` },
+  { title:"RFI draft",           sop:"8.5.02", text:(p)=>`The superintendent on ${p} reports: [field issue]. Find the relevant drawing sheets and spec sections, then draft an RFI per SOP 8.5.02 with the question, references, a proposed solution, and the schedule impact if unanswered in 5 days. Submit it to my approval queue.` },
+  { title:"Cost at Complete",    sop:"8.4.04", text:(p)=>`Build this month’s Cost at Complete for ${p} from the Sage job cost export, open commitments and pending change events. Show variance to last month by cost code and explain any movement over $[threshold].` },
+  { title:"Back charge package", sop:"8.3.15", text:(p)=>`Assemble a back-charge package against [Sub] on ${p} for [issue]: relevant contract clauses, notices sent, daily log entries, photos, and a cost calculation. Draft the notice letter and submit it to my approval queue.` },
+  { title:"Meeting minutes",     sop:"8.2.05", text:(p)=>`From the attached Teams transcript for ${p}, write minutes using the Procore meeting template: decisions, action items with owner and due date, and open items carried forward.` }
+];
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const $ = (sel, root) => (root || document).querySelector(sel);
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const clone = o => JSON.parse(JSON.stringify(o));
+
+function esc(v){
+  return String(v == null ? "" : v).replace(/[&<>"']/g, c =>
+    ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+function startOfDay(d){ const x = new Date(d); x.setHours(0,0,0,0); return x; }
+const TODAY = startOfDay(new Date());
+function addDays(n){ const d = new Date(TODAY); d.setDate(d.getDate() + n); return d; }
+function fmtDate(d){ return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`; }
+function fillDates(str){
+  return String(str).replace(/\{d([+-]\d+)\}/g, (_, n) => fmtDate(addDays(parseInt(n, 10))));
+}
+function fmtMoney(n, cents){
+  if (n == null || !isFinite(n)) return "—";
+  const s = Math.abs(n).toLocaleString("en-US", {
+    style:"currency", currency:"USD",
+    minimumFractionDigits: cents ? 2 : 0, maximumFractionDigits: cents ? 2 : 0
+  });
+  return n < 0 ? `(${s})` : s;
+}
+function fmtCompact(n){
+  const a = Math.abs(n);
+  const s = a >= 1e6 ? `$${(a/1e6).toFixed(2)}M` : a >= 1e3 ? `$${Math.round(a/1e3)}K` : `$${a}`;
+  return n < 0 ? `(${s})` : s;
+}
+function nowTime(){ return new Date().toLocaleTimeString("en-US", { hour:"numeric", minute:"2-digit" }); }
+function plural(n, word){ return `${n} ${word}${n === 1 ? "" : "s"}`; }
+function sum(arr, key){ return arr.reduce((s, x) => s + (Number(x[key]) || 0), 0); }
+
+function schedLabel(days){
+  if (days > 0) return { text:`${plural(days,"day")} behind`, cls:"neg" };
+  if (days < 0) return { text:`${plural(-days,"day")} ahead`, cls:"pos" };
+  return { text:"On schedule", cls:"pos" };
+}
+function dueLabel(offset){
+  if (offset < 0)   return { text:`${plural(-offset,"day")} overdue`, cls:"neg" };
+  if (offset === 0) return { text:"Due today", cls:"neg" };
+  if (offset <= 3)  return { text:`In ${plural(offset,"day")}`, cls:"neg" };
+  if (offset <= 7)  return { text:`In ${plural(offset,"day")}`, cls:"warn" };
+  return { text:`In ${plural(offset,"day")}`, cls:"" };
+}
+function cacDeltaText(p){
+  if (p.cacDelta === 0) return "no change";
+  return (p.cacDelta > 0 ? "up " : "down ") + fmtMoney(Math.abs(p.cacDelta));
+}
+function flagCount(item){ return item.checks.filter(c => c[0] !== "ok").length; }
+function needsVerify(item){ return item.amount != null && item.amount >= CONFIG.approvalFrictionThreshold && item.verify.length > 0; }
+function teamFor(key){
+  return USERS.filter(u => u.access === "project" && u.projects.includes(key)).map(u => `${u.name} (${u.role})`);
+}
+
+const ICONS = {
+  today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  approvals:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg>',
+  review:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  projects:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1M10 21v-3h4v3"/></svg>',
+  deadlines:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>',
+  ask:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+  activity:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
+  connections:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>'
+};
+
+/* ============================================================
+   API LAYER
+   Mock mode imitates the Worker, including server-side scoping.
+   Project users get their assigned projects; corporate gets all.
+   ============================================================ */
+const API = {
+  async signIn(userId){
+    if (CONFIG.apiMode === "live") return liveFetch("/session");   // identity comes from Cloudflare Access / Entra
+    await wait(300);
+    const u = USERS.find(x => x.id === userId);
+    if (!u) throw new Error("Unknown user");
+    return clone(u);
+  },
+
+  async getPortalData(user){
+    if (CONFIG.apiMode === "live") return liveFetch("/portal");     // Worker derives scope and permissions from the token
+    await wait(350);
+    const scope = user.access === "corporate" ? Object.keys(PROJECTS) : user.projects;
+    const mine = r => scope.includes(r.project);
+    return {
+      projects: scope.map(k => Object.assign({ key:k, team:teamFor(k) }, clone(PROJECTS[k]))),
+      queue: clone(QUEUE.filter(mine)).map(q => Object.assign(q, { status:"pending", revision:1, bodyCurrent:null })),
+      deadlines: clone(DEADLINES.filter(mine)),
+      actions: user.access === "corporate" ? [] : clone(ACTIONS.filter(mine)),   // corporate has no action items
+      activity: clone(ACTIVITY.filter(mine)),
+      automations: AUTOMATIONS.map(a => ({
+        name:a.name, sop:a.sop, time:a.time,
+        flags: scope.reduce((s, k) => s + (a.flags[k] || 0), 0)
+      }))
+    };
+  },
+
+  async approve(item, payload){
+    if (CONFIG.apiMode === "live") return liveFetch(`/queue/${item.id}/approve`, { method:"POST", body:payload });
+    await wait(1100);
+    const n = Math.floor(10 + Math.random() * 80);
+    const refs = {
+      "Change order":`CCO-0${n}`, "RFI":`RFI #${100+n}`, "Pay app review":"Pay App #6, adjusted",
+      "Delay notice":`Correspondence #${200+n}`, "Meeting minutes":`Meeting #${n}`,
+      "Back charge":`BC-0${n}`, "Change event":`CE #${n}`
+    };
+    return { ref: refs[item.type] || `Procore #${n}` };
+  },
+
+  async returnToClaude(item, note){
+    if (CONFIG.apiMode === "live") return liveFetch(`/queue/${item.id}/return`, { method:"POST", body:{ note } });
+    await wait(250);
+    return { ok:true };
+  },
+
+  async reject(item, reason){
+    if (CONFIG.apiMode === "live") return liveFetch(`/queue/${item.id}/reject`, { method:"POST", body:{ reason } });
+    await wait(250);
+    return { ok:true };
+  }
+};
+
+/* Live-mode fetch skeleton. credentials:"include" sends the Cloudflare Access cookie. */
+async function liveFetch(path, opts){
+  opts = opts || {};
+  const res = await fetch(CONFIG.apiBase + path, {
+    method: opts.method || "GET",
+    credentials: "include",
+    headers: { "Content-Type":"application/json" },
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  return res.json();
+}
+
+/* ============================================================
+   STATE
+   ============================================================ */
+function freshChat(){ return { messages:[], busy:false, mode:null, draft:"" }; }
+const state = {
+  user:null, data:null, view:"today",
+  openId:null, lastFocus:null, noteMode:null,
+  verify:{},
+  filters:{ qProject:"all", qType:"all", dType:"all" },
+  askProject:null,
+  chat: freshChat()
+};
+function isCorp(){ return !!(state.user && state.user.access === "corporate"); }
+function projectName(key){
+  const p = state.data && state.data.projects.find(x => x.key === key);
+  return p ? p.name : (PROJECTS[key] ? PROJECTS[key].name : key);
+}
+function findItem(id){ return state.data.queue.find(q => q.id === id); }
+function openItems(){ return state.data.queue.filter(q => q.status === "pending" || q.status === "returned"); }
+function logActivity(entry){ state.data.activity.unshift(Object.assign({ when:`Today ${nowTime()}` }, entry)); }
+
+function navItems(){
+  return [
+    { id:"today",       label:"Today",                                  icon:"today" },
+    { id:"approvals",   label: isCorp() ? "In review" : "Approvals",    icon: isCorp() ? "review" : "approvals", badge: !isCorp() },
+    { id:"projects",    label: isCorp() ? "All projects" : "My projects", icon:"projects" },
+    { id:"deadlines",   label:"Deadlines",                              icon:"deadlines" },
+    { sep:true },
+    { id:"ask",         label:"Ask Claude",                             icon:"ask" },
+    { id:"activity",    label:"Activity",                               icon:"activity" },
+    { id:"connections", label:"Connections",                            icon:"connections" }
+  ];
+}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+function renderLogin(){
+  const option = u => {
+    const corp = u.access === "corporate";
+    const meta = u.role;
+    return `
+      <button type="button" class="user-option" data-action="signin" data-user="${esc(u.id)}">
+        <span class="avatar${corp ? " corp" : ""}">${esc(u.initials)}</span>
+        <span class="u-text">
+          <span class="u-name">${esc(u.name)}</span>
+          <span class="u-meta">${esc(meta)}</span>
+        </span>
+      </button>`;
+  };
+  $("#userPick").innerHTML =
+    USERS.filter(u => u.access === "project").map(option).join("") +
+    `<p class="login-group">Corporate</p>` +
+    USERS.filter(u => u.access === "corporate").map(option).join("");
+}
+
+async function signIn(userId, btn){
+  if (btn) btn.setAttribute("aria-busy","true");
+  try{
+    const user = await API.signIn(userId);
+    const data = await API.getPortalData(user);
+    Object.assign(state, {
+      user, data, view:"today", openId:null, noteMode:null, verify:{},
+      filters:{ qProject:"all", qType:"all", dType:"all" },
+      askProject: data.projects[0].key,
+      chat: freshChat()
+    });
+    $("#loginView").hidden = true;
+    $("#shellView").hidden = false;
+    renderChrome();
+    render();
+    window.scrollTo(0,0);
+    $("#main").focus();
+    toast(isCorp()
+      ? `Signed in as ${user.name}. Corporate view of all ${data.projects.length} projects.`
+      : `Signed in as ${user.name}. Showing ${plural(user.projects.length,"project")}.`);
+  } catch(err){
+    toast(`Sign-in failed: ${err.message}`);
+  } finally {
+    if (btn) btn.removeAttribute("aria-busy");
+  }
+}
+
+function signOut(){
+  closeDrawer(true);
+  Object.assign(state, { user:null, data:null, view:"today", openId:null, noteMode:null, verify:{}, chat:freshChat() });
+  $("#shellView").hidden = true;
+  $("#loginView").hidden = false;
+  window.scrollTo(0,0);
+  toast("Signed out.");
+}
+
+/* ============================================================
+   CHROME + NAV
+   ============================================================ */
+function renderChrome(){
+  const u = state.user;
+  const av = $("#userAvatar");
+  av.textContent = u.initials;
+  av.classList.toggle("corp", isCorp());
+  $("#userName").textContent = u.name;
+  $("#userRole").textContent = u.role;
+  $("#scopeChips").innerHTML = isCorp()
+    ? `<span class="scope-label">Access</span><span class="scope-chip">All ${state.data.projects.length} projects, view only</span>`
+    : `<span class="scope-label">My projects</span>` + state.data.projects.map(p => `<span class="scope-chip">${esc(p.name)}</span>`).join("");
+}
+
+function renderNav(){
+  const pending = state.data.queue.filter(q => q.status === "pending").length;
+  const foot = isCorp()
+    ? "View-only access to every project. Project teams approve drafts."
+    : "Claude prepares. You decide. Procore stays the system of record.";
+  $("#sidenav").innerHTML = navItems().map(n => {
+    if (n.sep) return `<div class="nav-sep" role="separator"></div>`;
+    const active = state.view === n.id;
+    const badge = n.badge && pending ? `<span class="nav-badge" aria-label="${pending} waiting">${pending}</span>` : "";
+    return `<button type="button" class="nav-item${active ? " active" : ""}" data-action="nav" data-view="${n.id}"${active ? ' aria-current="page"' : ""}>${ICONS[n.icon]}<span>${esc(n.label)}</span>${badge}</button>`;
+  }).join("") + `<div class="nav-foot">${esc(foot)}</div>`;
+}
+
+/* ============================================================
+   RENDER ROUTER
+   ============================================================ */
+const VIEWS = {
+  today: viewToday, approvals: viewApprovals, projects: viewProjects,
+  deadlines: viewDeadlines, ask: viewAsk, activity: viewActivity, connections: viewConnections
+};
+function render(){ renderNav(); renderMain(); }
+function renderMain(){
+  const fn = VIEWS[state.view] || viewToday;
+  $("#main").innerHTML = fn() + `<p class="foot">Project Portal shell v0.3. Sample data for preview only.</p>`;
+  if (state.view === "ask") afterAskRender();
+}
+function go(view){
+  state.view = view;
+  render();
+  window.scrollTo(0,0);
+  $("#main").focus({ preventScroll:true });
+}
+
+/* ============================================================
+   VIEW: TODAY
+   ============================================================ */
+function viewToday(){
+  const d = state.data, u = state.user, corp = isCorp();
+  const pending = d.queue.filter(q => q.status === "pending");
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const dateLine = TODAY.toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric", year:"numeric" });
+  const nextDeadline = d.deadlines.slice().sort((a,b) => a.offset - b.offset)[0];
+  const behind = d.projects.filter(p => p.sched > 0);
+
+  const due7 = d.deadlines.filter(x => x.offset <= 7).length;
+  const overdue = d.deadlines.filter(x => x.offset < 0).length;
+  const aged = sum(d.projects, "agedRfis");
+  const subs = sum(d.projects, "overdueSubmittals");
+  const exposure = sum(d.projects, "exposure");
+
+  const urgent = nextDeadline
+    ? `Most urgent deadline: ${esc(nextDeadline.title)} (${esc(projectName(nextDeadline.project))}), ${esc(dueLabel(nextDeadline.offset).text.toLowerCase())}.`
+    : "No open deadlines.";
+
+  const hero = corp ? `
+    <section class="hero" aria-label="Portfolio at a glance">
+      <div>
+        <div class="hero-count">${d.projects.length}</div>
+        <p class="hero-line">active projects in the portfolio</p>
+        <p class="hero-next">${behind.length ? `${plural(behind.length,"project")} behind schedule (${esc(behind.map(p => p.name).join(", "))}).` : "Every project is on or ahead of schedule."} ${plural(pending.length,"draft")} with project teams for review. ${urgent}</p>
+      </div>
+      <div class="hero-actions">
+        <button type="button" class="btn btn-gold" data-action="nav" data-view="ask">Ask Claude about the portfolio</button>
+        <button type="button" class="btn btn-ghost" data-action="nav" data-view="projects">View all projects</button>
+      </div>
+    </section>` : `
+    <section class="hero" aria-label="Waiting on you">
+      <div>
+        <div class="hero-count">${pending.length}</div>
+        <p class="hero-line">${pending.length ? `${pending.length === 1 ? "draft is" : "drafts are"} ready for your decision` : "Nothing is waiting on you"}</p>
+        <p class="hero-next">${urgent}</p>
+      </div>
+      <div class="hero-actions">
+        <button type="button" class="btn btn-gold" data-action="nav" data-view="approvals">Review approvals</button>
+        <button type="button" class="btn btn-ghost" data-action="nav" data-view="ask">Ask Claude</button>
+      </div>
+    </section>`;
+
+  const strip = `
+    <div class="strip">
+      <button type="button" class="strip-item" data-action="nav" data-view="deadlines">
+        <div class="strip-value${overdue ? " neg" : ""}">${due7}</div>
+        <div class="strip-label">Deadlines in the next 7 days${overdue ? `, ${overdue} overdue` : ""}</div>
+      </button>
+      <button type="button" class="strip-item" data-action="nav" data-view="projects">
+        <div class="strip-value">${aged}</div>
+        <div class="strip-label">RFIs open more than 7 days</div>
+      </button>
+      <button type="button" class="strip-item" data-action="nav" data-view="projects">
+        <div class="strip-value${subs ? " neg" : ""}">${subs}</div>
+        <div class="strip-label">Submittals overdue</div>
+      </button>
+      <button type="button" class="strip-item" data-action="nav" data-view="projects">
+        <div class="strip-value">${fmtCompact(exposure)}</div>
+        <div class="strip-label">Open change exposure</div>
+      </button>
+    </div>`;
+
+  /* Left panel: ranked actions for project users; read-only digest flags for corporate */
+  const left = corp ? `
+    <section class="panel" aria-labelledby="flagsTitle">
+      <div class="panel-head">
+        <h3 id="flagsTitle">Flagged in last night’s digest</h3>
+        <span class="badge">As of 5:30 AM</span>
+      </div>
+      <ul class="action-list">
+        ${d.projects.map(p => `
+          <li>
+            <button type="button" class="action" data-action="nav" data-view="projects">
+              <span>
+                <span class="action-text">${esc(fillDates(p.flag))}</span>
+                <span class="action-meta"><span class="proj-tag">${esc(p.name)}</span><span class="pill ${schedLabel(p.sched).cls}">${esc(schedLabel(p.sched).text)}</span></span>
+              </span>
+            </button>
+          </li>`).join("")}
+      </ul>
+    </section>` : `
+    <section class="panel" aria-labelledby="topActionsTitle">
+      <div class="panel-head">
+        <h3 id="topActionsTitle">Top actions across your projects</h3>
+        <span class="badge">Prepared 5:30 AM</span>
+      </div>
+      ${d.actions.length ? `<ol class="action-list">${d.actions.slice(0,5).map((a,i) => `
+        <li>
+          <button type="button" class="action" data-action="goto" data-link="${esc(a.link)}">
+            <span class="action-rank">${i+1}</span>
+            <span>
+              <span class="action-text">${esc(fillDates(a.text))}</span>
+              <span class="action-meta"><span class="proj-tag">${esc(projectName(a.project))}</span></span>
+            </span>
+          </button>
+        </li>`).join("")}</ol>` : `<div class="empty"><strong>No actions today</strong>The overnight digest found nothing that needs you.</div>`}
+    </section>`;
+
+  const runs = d.automations.map(r => {
+    const meta = r.name.startsWith("Daily field")
+      ? `${plural(d.projects.length,"daily log")} read`
+      : r.flags ? plural(r.flags,"flag") + " for review" : "No flags";
+    return `
+      <div class="run">
+        <span class="run-dot${r.flags ? " flag" : ""}" aria-hidden="true"></span>
+        <div>
+          <div class="run-name">${esc(r.name)}</div>
+          <div class="run-meta">SOP ${esc(r.sop)}, ran at ${esc(r.time)}</div>
+        </div>
+        <span class="run-right pill${r.flags ? " warn" : " pos"}">${esc(meta)}</span>
+      </div>`;
+  }).join("");
+
+  const rows = d.projects.map(p => {
+    const s = schedLabel(p.sched);
+    const short = p.manpower[0] < p.manpower[1] * 0.95;
+    return `
+      <tr class="clickable" tabindex="0" data-action="nav" data-view="projects">
+        <td class="strong">${esc(p.name)}</td>
+        <td><div class="bar-row"><div class="bar" aria-hidden="true"><span style="width:${p.pct}%"></span></div><span class="num">${p.pct}%</span></div></td>
+        <td class="num"><span class="pill${short ? " warn" : ""}">${p.manpower[0]} of ${p.manpower[1]} planned</span></td>
+        <td><span class="pill ${s.cls}">${esc(s.text)}</span></td>
+        <td class="muted small">${esc(p.lastLog)}</td>
+        <td>${esc(fillDates(p.flag))}</td>
+      </tr>`;
+  }).join("");
+
+  return `
+    <div class="page-head">
+      <h2>${greet}, ${esc(u.name.split(" ")[0])}</h2>
+      <p>${esc(dateLine)}</p>
+    </div>
+
+    ${hero}
+
+    <div class="wrap">
+      ${strip}
+      <div class="grid-2">
+        ${left}
+        <section class="panel" aria-labelledby="runsTitle">
+          <div class="panel-head">
+            <h3 id="runsTitle">Ran overnight</h3>
+            <span class="panel-note">Level A, spot-check weekly</span>
+          </div>
+          ${runs}
+        </section>
+      </div>
+    </div>
+
+    <h3 class="section-title">Project pulse from last night’s daily logs</h3>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Project</th><th>Complete</th><th>Manpower today</th><th>Schedule</th><th>Last daily log</th><th>From the digest</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+/* ============================================================
+   VIEW: APPROVALS / IN REVIEW
+   ============================================================ */
+function viewApprovals(){
+  const d = state.data, f = state.filters, corp = isCorp();
+  const types = Array.from(new Set(d.queue.map(q => q.type))).sort();
+
+  const match = q => (f.qProject === "all" || q.project === f.qProject) && (f.qType === "all" || q.type === f.qType);
+  const open = openItems().filter(match);
+  const done = d.queue.filter(q => ["processing","written","rejected"].includes(q.status)).filter(match);
+
+  const projectChips = d.projects.length > 1 ? `
+    <span class="filters-label">Project</span>
+    <button type="button" class="chip${f.qProject === "all" ? " active" : ""}" data-action="filter" data-key="qProject" data-value="all">All</button>
+    ${d.projects.map(p => `<button type="button" class="chip${f.qProject === p.key ? " active" : ""}" data-action="filter" data-key="qProject" data-value="${esc(p.key)}">${esc(p.name)}</button>`).join("")}` : "";
+
+  const statusPill = q => {
+    if (q.status === "returned")   return `<span class="pill info">Claude is revising</span>`;
+    if (q.status === "pending")    return corp ? `<span class="pill">With project team</span>` : `<span class="pill">Waiting on you</span>`;
+    if (q.status === "rejected")   return `<span class="pill neg">Rejected</span>`;
+    if (q.status === "processing") return `<span class="pill info">Writing to Procore</span>`;
+    return `<span class="pill pos">In Procore, ${esc(q.procoreRef)}</span>`;
+  };
+
+  const row = q => {
+    const flags = flagCount(q);
+    return `
+      <tr class="clickable" tabindex="0" data-action="open-item" data-id="${esc(q.id)}">
+        <td><div class="strong">${esc(fillDates(q.title))}</div><div class="muted small">SOP ${esc(q.sop)}${q.revision > 1 ? `, revision ${q.revision}` : ""}</div></td>
+        <td><span class="proj-tag">${esc(projectName(q.project))}</span></td>
+        <td><span class="tag">${esc(q.type)}</span></td>
+        <td class="num">${q.amount != null ? fmtMoney(q.amount, true) : '<span class="muted">—</span>'}</td>
+        <td>${flags ? `<span class="pill warn">${plural(flags,"flag")}</span>` : `<span class="pill pos">Clean</span>`}</td>
+        <td class="muted small">${esc(q.prepared)}</td>
+        <td>${statusPill(q)}</td>
+      </tr>`;
+  };
+
+  const table = items => `
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Draft</th><th>Project</th><th>Type</th><th>Amount</th><th>Claude’s checks</th><th>Prepared</th><th>Status</th></tr></thead>
+        <tbody>${items.map(row).join("")}</tbody>
+      </table>
+    </div>`;
+
+  const empty = corp
+    ? `<div class="empty"><strong>Nothing in review</strong>Drafts Claude prepares for project teams will appear here.</div>`
+    : `<div class="empty"><strong>You’re caught up</strong>New drafts from Claude will appear here as they’re prepared.</div>`;
+
+  return `
+    <div class="page-head">
+      <h2>${corp ? "In review" : "Approval queue"}</h2>
+      <p>${corp ? "Drafts project teams are reviewing. View only." : "Claude prepares. You decide. Nothing reaches Procore until you approve it."}</p>
+    </div>
+
+    <div class="wrap">
+      <div class="filters">
+        ${projectChips}
+        <label class="filters-label" for="qType" style="margin-left:${projectChips ? ".75rem" : "0"}">Type</label>
+        <select id="qType" class="select">
+          <option value="all"${f.qType === "all" ? " selected" : ""}>All types</option>
+          ${types.map(t => `<option value="${esc(t)}"${f.qType === t ? " selected" : ""}>${esc(t)}</option>`).join("")}
+        </select>
+      </div>
+      ${open.length ? table(open) : empty}
+    </div>
+
+    ${done.length ? `<h3 class="section-title" style="margin-top:2rem">Completed this session</h3>${table(done)}` : ""}`;
+}
+
+/* ============================================================
+   VIEW: PROJECTS
+   ============================================================ */
+function viewProjects(){
+  const corp = isCorp();
+  const cards = state.data.projects.map(p => {
+    const s = schedLabel(p.sched);
+    const deltaCls = p.cacDelta > 0 ? "neg" : p.cacDelta < 0 ? "pos" : "";
+    const deltaTxt = p.cacDelta === 0 ? "No change" : (p.cacDelta > 0 ? "+" : "−") + fmtMoney(Math.abs(p.cacDelta));
+    return `
+      <article class="panel project-card">
+        <div class="panel-head">
+          <h3>${esc(p.name)}</h3>
+          <span class="pill ${s.cls}">${esc(s.text)}</span>
+        </div>
+        <p class="project-loc">${esc(p.location)}, ${esc(p.phase.toLowerCase())}</p>
+        <div class="bar-row"><div class="bar" style="flex:1" aria-hidden="true"><span style="width:${p.pct}%"></span></div><span class="num small strong">${p.pct}% complete</span></div>
+        <div class="metrics">
+          <div class="metric"><div class="metric-k">Cost at Complete</div><div class="metric-v">${fmtCompact(p.cac)}</div></div>
+          <div class="metric"><div class="metric-k">CAC vs. last month</div><div class="metric-v ${deltaCls}">${deltaTxt}</div></div>
+          <div class="metric"><div class="metric-k">Change exposure</div><div class="metric-v">${fmtCompact(p.exposure)}</div></div>
+          <div class="metric"><div class="metric-k">Open RFIs</div><div class="metric-v">${p.openRfis}${p.agedRfis ? ` <span class="small muted">(${p.agedRfis} aged)</span>` : ""}</div></div>
+          <div class="metric"><div class="metric-k">Overdue submittals</div><div class="metric-v ${p.overdueSubmittals ? "neg" : ""}">${p.overdueSubmittals}</div></div>
+          <div class="metric"><div class="metric-k">Final CO</div><div class="metric-v">${fmtDate(addDays(p.finalCo))}</div></div>
+        </div>
+        <div class="card-actions">
+          <button type="button" class="btn btn-secondary btn-sm" data-action="toast" data-msg="In production, this opens ${esc(p.name)} directly in Procore${corp ? " with read-only access" : ""}.">Open in Procore</button>
+          <a class="btn btn-secondary btn-sm" href="${esc(CONFIG.dashboardUrl)}" target="_blank" rel="noopener">View in Executive Dashboard</a>
+        </div>
+        <p class="project-team">Project team: ${esc(p.team.length ? p.team.join(", ") : "Not assigned")}</p>
+      </article>`;
+  }).join("");
+
+  return `
+    <div class="page-head">
+      <h2>${corp ? "All projects" : "My projects"}</h2>
+      <p>${corp ? `${state.data.projects.length} active projects, view only` : `${plural(state.data.projects.length,"project")} assigned to you`}</p>
+    </div>
+    <div class="project-grid">${cards}</div>`;
+}
+
+/* ============================================================
+   VIEW: DEADLINES
+   ============================================================ */
+function viewDeadlines(){
+  const f = state.filters;
+  const all = state.data.deadlines.slice().sort((a,b) => a.offset - b.offset);
+  const types = Array.from(new Set(all.map(x => x.type))).sort();
+  const list = all.filter(x => f.dType === "all" || x.type === f.dType);
+
+  const rows = list.map(x => {
+    const l = dueLabel(x.offset);
+    return `
+      <tr>
+        <td class="num strong">${fmtDate(addDays(x.offset))}</td>
+        <td><span class="pill ${l.cls}">${esc(l.text)}</span></td>
+        <td><span class="tag">${esc(x.type)}</span></td>
+        <td>${esc(x.title)}</td>
+        <td><span class="proj-tag">${esc(projectName(x.project))}</span></td>
+        <td class="muted small">${esc(x.source)}</td>
+      </tr>`;
+  }).join("");
+
+  return `
+    <div class="page-head">
+      <h2>Deadlines</h2>
+      <p>Tracked by the portal with dates and alerts, not left to anyone’s memory</p>
+    </div>
+    <div class="wrap">
+      <div class="filters">
+        <span class="filters-label">Type</span>
+        <button type="button" class="chip${f.dType === "all" ? " active" : ""}" data-action="filter" data-key="dType" data-value="all">All</button>
+        ${types.map(t => `<button type="button" class="chip${f.dType === t ? " active" : ""}" data-action="filter" data-key="dType" data-value="${esc(t)}">${esc(t)}</button>`).join("")}
+      </div>
+      ${list.length ? `
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Due</th><th>Timing</th><th>Type</th><th>Item</th><th>Project</th><th>Source</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>` : `<div class="empty"><strong>No deadlines of this type</strong>Choose All to see every tracked deadline.</div>`}
+    </div>`;
+}
+
+/* ============================================================
+   VIEW: ASK CLAUDE (in-portal chat + starter prompts)
+   ============================================================ */
+function chatSuggestions(){
+  const d = state.data;
+  if (isCorp()){
+    const worst = d.projects.slice().sort((a,b) => b.sched - a.sched)[0];
+    return [
+      "Give me a portfolio summary.",
+      "Which projects are behind schedule?",
+      "What’s our total open change exposure?",
+      "What deadlines are coming up across the portfolio?",
+      `How is ${worst.name} doing?`
+    ];
+  }
+  const first = d.projects[0].name;
+  return [
+    "What’s waiting on me today?",
+    "Which of my deadlines are in the next week?",
+    `Why is Cost at Complete moving on ${first}?`,
+    `Summarize ${first} for my PM meeting.`
+  ];
+}
+
+function viewAsk(){
+  const d = state.data, corp = isCorp();
+  const scopeText = corp
+    ? `all ${d.projects.length} projects`
+    : d.projects.map(p => p.name).join(", ");
+
+  const chat = `
+    <div class="wrap">
+      <section class="panel chat" aria-labelledby="chatTitle">
+        <div class="panel-head">
+          <h3 id="chatTitle">Ask about ${corp ? "the portfolio" : "your projects"}</h3>
+          <span style="display:flex;gap:.5rem;align-items:center">
+            <span class="pill" id="chatStatus"></span>
+            <button type="button" class="btn btn-secondary btn-sm" data-action="chat-clear">Clear</button>
+          </span>
+        </div>
+        <div class="chat-log" id="chatLog" aria-live="polite"></div>
+        <div class="chat-suggest" id="chatSuggest">
+          ${chatSuggestions().map(s => `<button type="button" class="chip" data-action="chat-suggest" data-q="${esc(s)}">${esc(s)}</button>`).join("")}
+        </div>
+        <div class="chat-input">
+          <label class="sr-only" for="chatInput">Ask Claude a question</label>
+          <textarea id="chatInput" rows="2" placeholder="Ask about schedules, costs, deadlines, drafts or any project. Press Enter to send."></textarea>
+          <button type="button" class="btn btn-primary" id="chatSend" data-action="chat-send">Send</button>
+        </div>
+        <p class="chat-note" id="chatNote"></p>
+        <p class="chat-note">Claude answers from the portal data your account can see: ${esc(scopeText)}.</p>
+      </section>
+    </div>`;
+
+  if (corp) {
+    return `
+      <div class="page-head">
+        <h2>Ask Claude</h2>
+        <p>Questions about the portfolio, answered from portal data</p>
+      </div>
+      ${chat}`;
+  }
+
+  const sel = d.projects.find(p => p.key === state.askProject) || d.projects[0];
+  const allNames = d.projects.map(p => p.name).join(", ");
+  const cards = PROMPTS.map((p, i) => `
+    <article class="panel prompt-card">
+      <div class="panel-head">
+        <h3>${esc(p.title)}</h3>
+        <span class="tag">SOP ${esc(p.sop)}</span>
+      </div>
+      <div class="prompt-text" id="prompt-${i}">${esc(p.text(sel.name, allNames))}</div>
+      <div class="prompt-actions">
+        <button type="button" class="btn btn-primary btn-sm" data-action="copy-prompt" data-idx="${i}">Copy prompt</button>
+        <a class="btn btn-secondary btn-sm" href="${esc(CONFIG.claudeUrl)}" target="_blank" rel="noopener">Open Claude</a>
+      </div>
+    </article>`).join("");
+
+  return `
+    <div class="page-head">
+      <h2>Ask Claude</h2>
+      <p>Quick answers here; longer drafting in Claude</p>
+    </div>
+    ${chat}
+
+    <h3 class="section-title" style="margin-top:2rem">Starter prompts for longer work in Claude</h3>
+    <div class="callout">
+      <p>Use these in Claude for drafting that needs attachments or several steps. When a draft is finished, Claude submits it to your approval queue, and it reaches Procore only after you approve it here.</p>
+    </div>
+    <div class="filters">
+      <label class="filters-label" for="askProject">Fill prompts for</label>
+      <select id="askProject" class="select">
+        ${d.projects.map(p => `<option value="${esc(p.key)}"${p.key === sel.key ? " selected" : ""}>${esc(p.name)}</option>`).join("")}
+      </select>
+      <span class="filters-label">Bracketed items are yours to fill in.</span>
+    </div>
+    <div class="prompt-grid">${cards}</div>`;
+}
+
+function afterAskRender(){
+  renderChatLog();
+  updateChatControls();
+  const inp = $("#chatInput");
+  if (inp) inp.value = state.chat.draft || "";
+}
+
+/* Minimal, safe formatter for chat replies: escape first, then **bold**, bullets and line breaks */
+function richText(s){
+  return esc(s).split("\n").map(line => {
+    line = line.replace(/^#{1,6}\s*(.+)$/, "<strong>$1</strong>");
+    const b = line.match(/^\s*(?:[-•]|\*(?!\*))\s+(.*)$/);
+    if (b) line = "• " + b[1];
+    return line.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  }).join("<br>");
+}
+
+function renderChatLog(){
+  const log = $("#chatLog");
+  if (!log) return;
+  const c = state.chat;
+  if (!c.messages.length && !c.busy){
+    log.innerHTML = `
+      <div class="chat-empty">
+        <strong>Ask anything about ${isCorp() ? "the portfolio" : "your projects"}</strong>
+        ${isCorp()
+          ? "For example, which projects are behind, where change exposure is concentrated, or what’s coming due."
+          : "For example, what needs your decision, what’s due this week, or why a number moved."}
+      </div>`;
+    return;
+  }
+  log.innerHTML = c.messages.map(m => {
+    if (m.role === "user") return `<div class="msg user">${esc(m.content)}</div>`;
+    const who = m.source === "demo" ? "Demo responder (sample data)" : m.source === "error" ? "Couldn’t answer" : "Claude";
+    return `<div class="msg assistant${m.source === "error" ? " error" : ""}"><div class="msg-who${m.source === "demo" ? " demo" : ""}">${who}</div>${richText(m.content)}</div>`;
+  }).join("") + (c.busy ? `<div class="msg assistant"><div class="msg-who">Claude</div>Reading the portal data<span class="typing" aria-hidden="true"><span></span><span></span><span></span></span></div>` : "");
+  log.scrollTop = log.scrollHeight;
+}
+
+function updateChatControls(){
+  const c = state.chat;
+  const send = $("#chatSend"), inp = $("#chatInput"), status = $("#chatStatus"), note = $("#chatNote");
+  if (send) send.disabled = c.busy;
+  if (inp) inp.disabled = c.busy;
+  document.querySelectorAll('[data-action="chat-suggest"]').forEach(b => { b.disabled = c.busy; });
+  if (status){
+    status.className = "pill " + (c.mode === "claude" || c.mode === "worker" ? "pos" : c.mode === "demo" ? "warn" : "");
+    status.textContent = c.mode === "claude" || c.mode === "worker" ? "Connected to Claude" : c.mode === "demo" ? "Demo responder" : "Ready";
+  }
+  if (note){
+    note.textContent = c.mode === "demo"
+      ? "Claude isn’t reachable from this preview, so answers come from a simple rules-based responder over the sample data. In production, the Worker’s /ask endpoint connects this chat to Claude."
+      : "";
+    note.hidden = !note.textContent;
+  }
+}
+
+/* Everything Claude is allowed to know: only the signed-in user’s scoped data */
+function portalContext(){
+  const d = state.data;
+  return {
+    today: fmtDate(TODAY),
+    user: { name: state.user.name, role: state.user.role, access: state.user.access },
+    projects: d.projects.map(p => ({
+      name:p.name, location:p.location, phase:p.phase, team:p.team,
+      percentComplete:p.pct, costAtComplete:p.cac, cacChangeVsLastMonth:p.cacDelta,
+      scheduleDaysBehind:p.sched, openRfis:p.openRfis, rfisOpenOver7Days:p.agedRfis,
+      overdueSubmittals:p.overdueSubmittals, openChangeExposure:p.exposure,
+      finalCO:fmtDate(addDays(p.finalCo)), manpowerLastNight:p.manpower[0], manpowerPlan:p.manpower[1],
+      digestFlag:fillDates(p.flag)
+    })),
+    drafts: d.queue.map(q => ({
+      title:fillDates(q.title), project:projectName(q.project), type:q.type, sop:q.sop,
+      amount:q.amount, status:q.status, revision:q.revision,
+      claudeFlags:q.checks.filter(c => c[0] !== "ok").map(c => fillDates(c[1]))
+    })),
+    deadlines: d.deadlines.slice().sort((a,b) => a.offset - b.offset).map(x => ({
+      due:fmtDate(addDays(x.offset)), daysFromToday:x.offset, type:x.type,
+      item:x.title, project:projectName(x.project), source:x.source
+    })),
+    overnightRuns: d.automations,
+    recentActivity: d.activity.slice(0, 15).map(a => ({ when:a.when, who:a.actor, action:a.action, item:fillDates(a.item), project:projectName(a.project) })),
+    note: "Sample demonstration data."
+  };
+}
+
+function systemPrompt(){
+  const corp = isCorp();
+  return [
+    "You are Claude, built into the TGC Project Portal for The Garrett Companies’ construction team.",
+    "Answer the user’s questions using ONLY the portal data below. It is the complete set of data this user is permitted to see.",
+    "If the answer isn’t in the data, say so plainly and name where it would live (Procore, Sage or SharePoint).",
+    "If the user asks about a project that isn’t in the data, say it isn’t available to their account.",
+    corp
+      ? "This user has corporate, view-only access to every project. They cannot approve, return or reject drafts, so never suggest that they do; point them to the project team instead."
+      : "This user approves drafts for their own projects. When relevant, point them to the item in their approval queue.",
+    "Be concise and specific: lead with the answer, use real numbers and dates from the data, format dates as M/D/YYYY and money like $1,234.",
+    "Formatting: short paragraphs or lines starting with \"• \". Bold project names with **double asterisks**. No headings or tables.",
+    `Today is ${fmtDate(TODAY)}. User: ${state.user.name}, ${state.user.role}.`,
+    "",
+    "PORTAL DATA (JSON):",
+    JSON.stringify(portalContext())
+  ].join("\n");
+}
+
+/* Direct call: works only where the preview environment supplies credentials (never in production) */
+async function callClaudeDirect(messages){
+  if (typeof fetch !== "function") throw new Error("fetch unavailable");
+  const ctrl = typeof AbortController === "function" ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), 45000) : null;
+  try{
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ model:CONFIG.claudeModel, max_tokens:1000, system:systemPrompt(), messages }),
+      signal: ctrl ? ctrl.signal : undefined
+    });
+    if (!res.ok) throw new Error(`Claude returned ${res.status}`);
+    const data = await res.json();
+    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("\n").trim();
+    if (!text) throw new Error("Empty reply");
+    return text;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function askClaude(){
+  const msgs = state.chat.messages
+    .filter(m => m.source !== "error")
+    .slice(-12)
+    .map(m => ({ role:m.role, content:m.content }));
+  while (msgs.length && msgs[0].role !== "user") msgs.shift();
+  const last = msgs.length ? msgs[msgs.length - 1].content : "";
+
+  /* Production: the Worker builds the context server-side and holds the API key */
+  if (CONFIG.askMode === "worker"){
+    const r = await liveFetch("/ask", { method:"POST", body:{ messages:msgs } });
+    state.chat.mode = "worker";
+    return { reply:r.reply, source:"claude" };
+  }
+
+  /* Shell "auto": try Claude once; if unreachable, use the labeled demo responder for the session */
+  if (state.chat.mode !== "demo"){
+    try{
+      const reply = await callClaudeDirect(msgs);
+      state.chat.mode = "claude";
+      return { reply, source:"claude" };
+    } catch(err){
+      if (state.chat.mode === "claude") throw err;   // was working, so surface the real error
+      state.chat.mode = "demo";
+    }
+  }
+  await wait(650);
+  return { reply:demoAnswer(last), source:"demo" };
+}
+
+async function sendChat(text){
+  text = String(text || "").trim();
+  const c = state.chat;
+  if (!text || c.busy) return;
+  c.messages.push({ role:"user", content:text });
+  c.busy = true;
+  c.draft = "";
+  const inp = $("#chatInput");
+  if (inp) inp.value = "";
+  renderChatLog(); updateChatControls();
+
+  let reply, source;
+  try{ ({ reply, source } = await askClaude()); }
+  catch(err){ reply = `The request didn’t go through (${err.message}). Try again in a moment.`; source = "error"; }
+
+  /* Ignore the reply if the user signed out mid-request */
+  if (state.chat !== c) return;
+  c.messages.push({ role:"assistant", content:reply, source });
+  c.busy = false;
+  renderChatLog(); updateChatControls();
+  const again = $("#chatInput");
+  if (again) again.focus();
+}
+
+/* ------------------------------------------------------------
+   Demo responder: rule-based answers over the scoped sample data.
+   Shown with a "Demo responder" label so it is never mistaken for Claude.
+   ------------------------------------------------------------ */
+function demoAnswer(text){
+  const t = String(text).toLowerCase();
+  const d = state.data;
+  const has = re => re.test(t);
+
+  const outside = Object.keys(PROJECTS)
+    .filter(k => !d.projects.some(p => p.key === k))
+    .map(k => PROJECTS[k].name)
+    .find(n => t.includes(n.toLowerCase()));
+  if (outside) return `I can’t see **${outside}** from your account. My answers are limited to the projects you have access to: ${d.projects.map(p => p.name).join(", ")}.`;
+
+  const named = d.projects.find(p => t.includes(p.name.toLowerCase()));
+  if (has(/deadline|due|overdue|expir|notice/)) return demoDeadlines(named);
+  if (named) return demoProject(named);
+  if (has(/behind|schedule|late|slip|ahead/)) return demoSchedule();
+  if (has(/waiting|pending|approv|queue|draft|review|on me|my plate|to do|todo/)) return demoQueue();
+  if (has(/exposure|change order|change event/)) return demoExposure();
+  if (has(/cost|cac|budget|variance|forecast/)) return demoCost();
+  if (has(/rfi|submittal/)) return demoRfis();
+  if (has(/summar|overview|portfolio|status|how .*(look|doing|going)|update/)) return demoOverview();
+  return [
+    "In this preview I can answer questions about schedules, Cost at Complete, change exposure, RFIs and submittals, deadlines, the drafts in review, or any one of your projects by name.",
+    "Connected to Claude in production, you can ask about this data in your own words."
+  ].join("\n\n");
+}
+function demoProject(p){
+  const drafts = state.data.queue.filter(q => q.project === p.key && q.status === "pending");
+  const next = state.data.deadlines.filter(x => x.project === p.key).sort((a,b) => a.offset - b.offset)[0];
+  const lines = [
+    `**${p.name}** (${p.location}) is ${p.pct}% complete and ${schedLabel(p.sched).text.toLowerCase()}.`,
+    `• Cost at Complete: ${fmtMoney(p.cac)}, ${cacDeltaText(p)} vs. last month`,
+    `• Open change exposure: ${fmtMoney(p.exposure)}`,
+    `• RFIs: ${p.openRfis} open, ${p.agedRfis} open more than 7 days. Overdue submittals: ${p.overdueSubmittals}`,
+    `• Manpower last night: ${p.manpower[0]} of ${p.manpower[1]} planned`,
+    `• Final CO: ${fmtDate(addDays(p.finalCo))}`,
+    `• From last night’s digest: ${fillDates(p.flag)}`
+  ];
+  if (drafts.length) lines.push(`• ${plural(drafts.length,"draft")} ${isCorp() ? "with the project team" : "waiting on you"}: ${drafts.map(q => fillDates(q.title)).join("; ")}`);
+  if (next) lines.push(`• Next deadline: ${next.title}, ${fmtDate(addDays(next.offset))} (${dueLabel(next.offset).text.toLowerCase()})`);
+  return lines.join("\n");
+}
+function demoDeadlines(named){
+  const list = state.data.deadlines
+    .filter(x => !named || x.project === named.key)
+    .sort((a,b) => a.offset - b.offset);
+  if (!list.length) return named ? `There are no tracked deadlines for **${named.name}**.` : "There are no tracked deadlines.";
+  const soon = list.filter(x => x.offset <= 7);
+  const show = (soon.length ? soon : list).slice(0, 6);
+  const head = soon.length
+    ? `${plural(soon.length,"deadline")} ${soon.length === 1 ? "falls" : "fall"} in the next 7 days${named ? ` on **${named.name}**` : ""}:`
+    : `Nothing is due in the next 7 days${named ? ` on **${named.name}**` : ""}. The next ones are:`;
+  return [head].concat(show.map(x => `• **${fmtDate(addDays(x.offset))}** (${dueLabel(x.offset).text.toLowerCase()}): ${x.title}, ${projectName(x.project)}`)).join("\n");
+}
+function demoSchedule(){
+  const ps = state.data.projects;
+  const behind = ps.filter(p => p.sched > 0).sort((a,b) => b.sched - a.sched);
+  const ahead = ps.filter(p => p.sched < 0), on = ps.filter(p => p.sched === 0);
+  if (!behind.length) return `None of your projects are behind schedule. ${plural(on.length,"project")} on schedule, ${ahead.length} ahead.`;
+  return [`${plural(behind.length,"project")} ${behind.length === 1 ? "is" : "are"} behind schedule:`]
+    .concat(behind.map(p => `• **${p.name}**: ${plural(p.sched,"day")} behind. ${fillDates(p.flag)}.`))
+    .concat([`${plural(on.length,"project")} on schedule${ahead.length ? `, ${ahead.length} ahead (${ahead.map(p => p.name).join(", ")})` : ""}.`])
+    .join("\n");
+}
+function demoQueue(){
+  const corp = isCorp();
+  const pend = state.data.queue.filter(q => q.status === "pending");
+  if (!pend.length) return corp ? "No drafts are in review right now." : "Nothing is waiting on you right now. New drafts from Claude will show up in your approval queue.";
+  const lines = pend.map(q => `• **${projectName(q.project)}**: ${fillDates(q.title)} (${q.type.toLowerCase()}${q.amount != null ? `, ${fmtMoney(q.amount, true)}` : ""})${flagCount(q) ? `, ${plural(flagCount(q),"flag")}` : ""}`);
+  const big = pend.filter(needsVerify).length;
+  const head = corp
+    ? `${plural(pend.length,"draft")} ${pend.length === 1 ? "is" : "are"} with project teams for review:`
+    : `${plural(pend.length,"draft")} ${pend.length === 1 ? "is" : "are"} waiting on you:`;
+  const tail = !corp && big ? `\n\n${big} of these ${big === 1 ? "is" : "are"} over ${fmtMoney(CONFIG.approvalFrictionThreshold)} and will ask you to confirm key points before approval.` : "";
+  return head + "\n" + lines.join("\n") + tail;
+}
+function demoExposure(){
+  const ps = state.data.projects.slice().sort((a,b) => b.exposure - a.exposure);
+  const total = sum(ps, "exposure");
+  return [`Open change exposure totals **${fmtMoney(total)}**:`]
+    .concat(ps.map(p => `• **${p.name}**: ${fmtMoney(p.exposure)} (${Math.round(p.exposure / total * 100)}%)`))
+    .join("\n");
+}
+function demoCost(){
+  const ps = state.data.projects;
+  const mover = ps.slice().sort((a,b) => Math.abs(b.cacDelta) - Math.abs(a.cacDelta))[0];
+  return ["Cost at Complete by project:"]
+    .concat(ps.map(p => `• **${p.name}**: ${fmtMoney(p.cac)}, ${cacDeltaText(p)} vs. last month`))
+    .concat([`\nThe biggest move is **${mover.name}** (${cacDeltaText(mover)}). Last night’s digest notes: ${fillDates(mover.flag)}.`])
+    .join("\n");
+}
+function demoRfis(){
+  const ps = state.data.projects;
+  return [`${sum(ps,"openRfis")} RFIs are open, ${sum(ps,"agedRfis")} of them more than 7 days. ${sum(ps,"overdueSubmittals")} submittals are overdue.`]
+    .concat(ps.map(p => `• **${p.name}**: ${p.openRfis} open RFIs (${p.agedRfis} aged), ${p.overdueSubmittals} overdue submittals`))
+    .join("\n");
+}
+function demoOverview(){
+  const d = state.data, corp = isCorp();
+  const pend = d.queue.filter(q => q.status === "pending").length;
+  const due7 = d.deadlines.filter(x => x.offset <= 7).length;
+  return [`Here’s where ${corp ? "the portfolio" : "your projects"} stand${corp ? "s" : ""}:`]
+    .concat(d.projects.map(p => `• **${p.name}**: ${p.pct}% complete, ${schedLabel(p.sched).text.toLowerCase()}, Cost at Complete ${fmtCompact(p.cac)} (${cacDeltaText(p)} vs. last month)`))
+    .concat([`\nAcross ${corp ? "all projects" : "them"}: ${plural(pend,"draft")} ${corp ? "in review with project teams" : "waiting on you"}, ${plural(due7,"deadline")} in the next 7 days, and ${fmtMoney(sum(d.projects,"exposure"))} in open change exposure.`])
+    .join("\n");
+}
+
+/* ============================================================
+   VIEW: ACTIVITY (audit trail)
+   ============================================================ */
+function viewActivity(){
+  const a = state.data.activity;
+  const approvals = a.filter(x => x.action.startsWith("Approved"));
+  const edited = approvals.filter(x => x.edited).length;
+  const returned = a.filter(x => x.action === "Returned to Claude").length;
+  const rate = approvals.length ? Math.round(edited / approvals.length * 100) : 0;
+
+  const rows = a.map(x => `
+    <tr>
+      <td class="muted small" style="white-space:nowrap">${esc(x.when)}</td>
+      <td class="strong">${esc(x.actor)}</td>
+      <td>${esc(x.action)}</td>
+      <td>${esc(fillDates(x.item))}</td>
+      <td><span class="proj-tag">${esc(projectName(x.project))}</span></td>
+      <td class="small">${esc(x.ref)}</td>
+      <td>${x.action.startsWith("Approved") ? (x.edited ? `<span class="pill warn">Edited</span>` : `<span class="pill">As drafted</span>`) : '<span class="muted">—</span>'}</td>
+    </tr>`).join("");
+
+  return `
+    <div class="page-head">
+      <h2>Activity</h2>
+      <p>${isCorp() ? "Every draft, approval and write-back across the portfolio" : "Every draft, approval and write-back on your projects"}</p>
+    </div>
+    <div class="wrap">
+      <div class="stats">
+        <div class="stat"><div class="stat-v">${approvals.length}</div><div class="stat-k">Approvals</div></div>
+        <div class="stat"><div class="stat-v">${edited}</div><div class="stat-k">Approved with edits</div></div>
+        <div class="stat"><div class="stat-v">${rate}%</div><div class="stat-k">Edit rate (near zero is a warning sign)</div></div>
+        <div class="stat"><div class="stat-v">${returned}</div><div class="stat-k">Returned to Claude</div></div>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Item</th><th>Project</th><th>Procore</th><th>Review</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   VIEW: CONNECTIONS
+   ============================================================ */
+function viewConnections(){
+  const u = state.user, corp = isCorp();
+  const list = [
+    { name:"Microsoft Entra ID", use:"Sign-in", status:["pos","Connected"], detail:`Signed in as ${u.email}. Access is removed automatically when an account is disabled.` },
+    { name:"Microsoft 365", use:"SharePoint, Outlook, Teams", status:["pos","Connected"], detail:"Project folders, email threads and meeting transcripts." },
+    corp
+      ? { name:"Procore", use:"RFIs, submittals, change events, commitments, daily logs, Pay", status:["pos","Connected, read only"], detail:"Corporate access can view every project but can’t approve or write to Procore." }
+      : { name:"Procore", use:"RFIs, submittals, change events, commitments, daily logs, Pay", status:["pos","Connected"], detail:`Authorized as ${u.name}. Every action runs under your Procore permissions and appears in Procore’s history under your name.`, action:"Reconnect" },
+    { name:"Sage", use:"Job cost, commitments, invoices, retainage", status:["warn","Needs decision"], detail:"Confirm the system of record before the connector is built: Sage Intacct (2026 Manual) or Sage 300 (job descriptions)." },
+    { name:"SmartPM", use:"Schedule analytics", status:["pos","Connected, read only"], detail:"Forecasted completion dates and schedule quality." },
+    { name:"Bridgit", use:"Resource schedule", status:["warn","Cleanup required"], detail:"Remove 0.01% placeholders and over-100% bookings before using it for capacity planning." },
+    { name:"DroneDeploy", use:"Progress imagery", status:["pos","Connected, read only"], detail:"Site captures referenced in pay app reviews and weekly reports." },
+    { name:"Claude", use:"Drafting, analysis and in-portal questions", status:["pos","Connected"], detail: corp
+        ? "Answers your questions from portfolio data your account can see."
+        : "Uses the TGC connector. Answers questions here and returns finished drafts to your approval queue." }
+  ];
+  return `
+    <div class="page-head">
+      <h2>Connections</h2>
+      <p>The systems this portal ${corp ? "reads from" : "reads from and writes to on your behalf"}</p>
+    </div>
+    <div class="conn-list">
+      ${list.map(c => `
+        <div class="panel conn">
+          <div>
+            <div class="conn-name">${esc(c.name)}</div>
+            <div class="conn-use">${esc(c.use)}</div>
+            <div class="conn-detail">${esc(c.detail)}</div>
+          </div>
+          <div class="conn-right">
+            <span class="pill ${c.status[0]}">${esc(c.status[1])}</span>
+            ${c.action ? `<button type="button" class="btn btn-secondary btn-sm" data-action="toast" data-msg="In production, this restarts the Procore authorization for your account.">${esc(c.action)}</button>` : ""}
+          </div>
+        </div>`).join("")}
+    </div>`;
+}
+
+/* ============================================================
+   REVIEW DRAWER
+   ============================================================ */
+function openDrawer(id, trigger){
+  const item = findItem(id);
+  if (!item) return;
+  state.openId = id;
+  state.noteMode = null;
+  state.lastFocus = trigger || document.activeElement;
+  renderDrawer();
+  $("#drawer").classList.add("open");
+  $("#drawer").setAttribute("aria-hidden","false");
+  $("#scrim").classList.add("open");
+  document.body.style.overflow = "hidden";
+  setTimeout(() => { const t = $("#drawerTitle"); if (t) t.focus(); }, 60);
+}
+
+function closeDrawer(silent){
+  if (!state.openId) return;
+  state.openId = null;
+  state.noteMode = null;
+  $("#drawer").classList.remove("open");
+  $("#drawer").setAttribute("aria-hidden","true");
+  $("#scrim").classList.remove("open");
+  document.body.style.overflow = "";
+  if (!silent && state.lastFocus && document.contains(state.lastFocus)) state.lastFocus.focus();
+}
+
+function renderDrawer(){
+  const item = findItem(state.openId);
+  if (!item) return;
+  renderDrawerHead(item);
+  renderDrawerBody(item);
+  renderDrawerFoot(item);
+}
+
+function renderDrawerHead(item){
+  const levelText = item.level === "A"
+    ? "Level A, write-back needs approval"
+    : "Level B, draft and approve";
+  $("#drawerHead").innerHTML = `
+    <div class="drawer-tags">
+      <span class="tag">${esc(item.type)}</span>
+      <span class="pill">SOP ${esc(item.sop)}</span>
+      <span class="pill info">${esc(isCorp() ? "View only" : levelText)}</span>
+      <button type="button" class="icon-btn" data-action="close-drawer" aria-label="Close">&times;</button>
+    </div>
+    <h3 class="drawer-title" id="drawerTitle" tabindex="-1">${esc(fillDates(item.title))}</h3>
+    <div class="drawer-sub">
+      <span>${esc(projectName(item.project))}</span>
+      <span>Prepared by Claude at ${esc(item.prepared)}</span>
+      ${item.revision > 1 ? `<span>Revision ${item.revision}</span>` : ""}
+    </div>`;
+}
+
+function renderDrawerBody(item){
+  const corp = isCorp();
+  const editable = item.status === "pending" && !corp;
+  const body = item.bodyCurrent != null ? item.bodyCurrent : fillDates(item.body);
+  const edited = item.bodyCurrent != null && item.bodyCurrent !== fillDates(item.body);
+  const icon = { ok:"✓", warn:"!", fail:"✕" };
+  let statusBlock = "";
+
+  if (item.status === "processing" || item.status === "written"){
+    statusBlock = `
+      <section>
+        <h4 class="block-title">Write-back to Procore</h4>
+        <div class="pipeline">
+          ${item.pipeline.map(s => `
+            <div class="step ${s.state}">
+              <span class="step-dot" aria-hidden="true">${s.state === "done" ? "✓" : ""}</span>
+              <span>${esc(s.label)}</span>
+              <span class="step-note">${esc(s.note || "")}</span>
+            </div>`).join("")}
+        </div>
+      </section>`;
+  } else if (item.status === "returned"){
+    statusBlock = `<div class="status-note info"><strong>Returned to Claude.</strong> Note: “${esc(item.returnNote)}”. A revised draft will come back to this queue.</div>`;
+  } else if (item.status === "rejected"){
+    statusBlock = `<div class="status-note neg"><strong>Rejected.</strong> Reason: “${esc(item.rejectReason)}”. Nothing was written to Procore.</div>`;
+  } else if (corp){
+    const team = (state.data.projects.find(p => p.key === item.project) || {}).team || [];
+    statusBlock = `<div class="status-note info"><strong>View only.</strong> ${esc(team.length ? team.join(", ") : "The project team")} approves drafts on this project.</div>`;
+  }
+
+  const verifyBlock = (editable && needsVerify(item)) ? `
+    <section class="verify" aria-labelledby="verifyTitle">
+      <h4 class="block-title" id="verifyTitle" style="margin-bottom:.3rem">Confirm before approving</h4>
+      <p>Items of ${esc(fmtMoney(CONFIG.approvalFrictionThreshold))} or more need each point confirmed.</p>
+      ${item.verify.map((v, i) => `
+        <label><input type="checkbox" data-verify="${i}"${(state.verify[item.id] || {})[i] ? " checked" : ""}> <span>${esc(v)}</span></label>`).join("")}
+    </section>` : "";
+
+  $("#drawerBody").innerHTML = `
+    ${statusBlock}
+    <section>
+      <h4 class="block-title">Key details</h4>
+      <div class="fields">
+        ${item.fields.map(f => `<div class="field"><div class="k">${esc(f[0])}</div><div class="v">${esc(fillDates(f[1]))}</div></div>`).join("")}
+      </div>
+    </section>
+    <section>
+      <h4 class="block-title"><label for="draftText">Draft${editable ? " (you can edit)" : ""}</label><span class="edited-flag" id="editedFlag"${edited ? "" : " hidden"}>Edited</span></h4>
+      <textarea class="draft" id="draftText"${editable ? "" : " disabled"}>${esc(body)}</textarea>
+    </section>
+    <section>
+      <h4 class="block-title">What Claude checked</h4>
+      <ul class="checks">
+        ${item.checks.map(c => `<li class="check"><span class="check-ic ${c[0]}" aria-hidden="true">${icon[c[0]]}</span><span><span class="sr-only">${c[0] === "ok" ? "Passed: " : c[0] === "warn" ? "Flag: " : "Failed: "}</span>${esc(fillDates(c[1]))}</span></li>`).join("")}
+      </ul>
+    </section>
+    <section>
+      <h4 class="block-title">Sources</h4>
+      <div class="sources">
+        ${item.sources.map(s => `<div class="source"><span class="src-kind">${esc(s[0])}</span><span>${esc(fillDates(s[1]))}</span></div>`).join("")}
+      </div>
+    </section>
+    ${verifyBlock}`;
+}
+
+function verifyComplete(item){
+  if (!needsVerify(item)) return true;
+  const v = state.verify[item.id] || {};
+  return item.verify.every((_, i) => v[i]);
+}
+
+function renderDrawerFoot(item){
+  const foot = $("#drawerFoot");
+  if (isCorp()){
+    foot.innerHTML = `
+      <p class="foot-hint" style="width:auto;flex:1">Corporate accounts can view drafts but can’t approve, return or reject them.</p>
+      <button type="button" class="btn btn-secondary" data-action="close-drawer">Close</button>`;
+    return;
+  }
+  if (item.status !== "pending"){
+    foot.innerHTML = `<span class="spacer"></span><button type="button" class="btn btn-secondary" data-action="close-drawer">Close</button>`;
+    return;
+  }
+  if (state.noteMode){
+    const isReturn = state.noteMode === "return";
+    foot.innerHTML = `
+      <div class="note-box">
+        <label for="noteText">${isReturn ? "What should Claude change?" : "Why are you rejecting this draft?"}</label>
+        <textarea id="noteText" placeholder="${isReturn ? "For example: use the revised fill quantity from FT-2238" : "For example: scope is covered by the base subcontract"}"></textarea>
+        <div class="note-actions">
+          <button type="button" class="btn btn-secondary" data-action="cancel-note">Cancel</button>
+          <button type="button" class="btn ${isReturn ? "btn-primary" : "btn-danger"}" data-action="${isReturn ? "confirm-return" : "confirm-reject"}">${isReturn ? "Return to Claude" : "Reject draft"}</button>
+        </div>
+      </div>`;
+    setTimeout(() => { const n = $("#noteText"); if (n) n.focus(); }, 30);
+    return;
+  }
+  const ready = verifyComplete(item);
+  foot.innerHTML = `
+    <button type="button" class="btn btn-danger" data-action="show-reject">Reject</button>
+    <button type="button" class="btn btn-secondary" data-action="show-return">Return to Claude</button>
+    <span class="spacer"></span>
+    <button type="button" class="btn btn-primary" id="approveBtn" data-action="approve"${ready ? "" : " disabled"}>Approve and write to Procore</button>
+    <p class="foot-hint" id="footHint">${ready
+      ? "Writes to Procore under your name. In this demo, nothing is sent."
+      : "Confirm each point above to enable approval."}</p>`;
+}
+
+/* ============================================================
+   APPROVAL ACTIONS (blocked for corporate; the Worker enforces this in production)
+   ============================================================ */
+function refreshAfterChange(id){
+  if (!state.data) return;
+  renderNav();
+  if (["approvals","today","activity"].includes(state.view)) renderMain();
+  if (state.openId === id) renderDrawer();
+}
+
+async function approveItem(id){
+  if (isCorp()) return;
+  const item = findItem(id);
+  if (!item || item.status !== "pending" || !verifyComplete(item)) return;
+
+  const original = fillDates(item.body);
+  const finalText = item.bodyCurrent != null ? item.bodyCurrent : original;
+  const edited = finalText !== original;
+
+  item.status = "processing";
+  item.pipeline = [
+    { label:`Approved by ${state.user.name}`, state:"done", note:nowTime() },
+    { label:"Queued for write-back", state:"active", note:"Cloudflare Queue" },
+    { label:"Written to Procore", state:"pending", note:"" }
+  ];
+  refreshAfterChange(id);
+
+  await wait(900);
+  item.pipeline[1].state = "done";
+  item.pipeline[2].state = "active";
+  refreshAfterChange(id);
+
+  try{
+    const res = await API.approve(item, { body:finalText, edited });
+    item.pipeline[2].state = "done";
+    item.pipeline[2].note = res.ref;
+    item.status = "written";
+    item.procoreRef = res.ref;
+    if (!state.data) return;
+    logActivity({ actor:state.user.name, action: edited ? "Approved with edits" : "Approved", item:fillDates(item.title), project:item.project, ref:res.ref, edited });
+    refreshAfterChange(id);
+    toast(`Written to Procore as ${res.ref}. Demo only, nothing was sent.`);
+  } catch(err){
+    item.status = "pending";
+    item.pipeline = null;
+    refreshAfterChange(id);
+    toast(`Write-back failed: ${err.message}. The draft is back in your queue.`);
+  }
+}
+
+async function returnItem(id){
+  if (isCorp()) return;
+  const item = findItem(id);
+  const box = $("#noteText");
+  const note = box ? box.value.trim() : "";
+  if (note.length < 3){ toast("Add a note so Claude knows what to change."); if (box) box.focus(); return; }
+
+  await API.returnToClaude(item, note);
+  item.status = "returned";
+  item.returnNote = note;
+  state.noteMode = null;
+  logActivity({ actor:state.user.name, action:"Returned to Claude", item:fillDates(item.title), project:item.project, ref:"Revision requested", edited:false });
+  refreshAfterChange(id);
+  toast("Returned to Claude.");
+
+  /* Simulate Claude sending back a revision */
+  const session = state.data;
+  setTimeout(() => {
+    if (state.data !== session || item.status !== "returned") return;
+    item.status = "pending";
+    item.revision += 1;
+    item.prepared = nowTime();
+    item.bodyCurrent = null;
+    item.checks = [["ok", `Revised per your note: “${note}”`]].concat(item.checks);
+    delete state.verify[item.id];
+    logActivity({ actor:"Claude", action:"Revised draft", item:fillDates(item.title), project:item.project, ref:`Revision ${item.revision}`, edited:false });
+    refreshAfterChange(id);
+    toast(`Claude sent revision ${item.revision} of “${fillDates(item.title)}”.`);
+  }, 3500);
+}
+
+async function rejectItem(id){
+  if (isCorp()) return;
+  const item = findItem(id);
+  const box = $("#noteText");
+  const reason = box ? box.value.trim() : "";
+  if (reason.length < 3){ toast("Add a reason before rejecting."); if (box) box.focus(); return; }
+
+  await API.reject(item, reason);
+  item.status = "rejected";
+  item.rejectReason = reason;
+  state.noteMode = null;
+  logActivity({ actor:state.user.name, action:"Rejected", item:fillDates(item.title), project:item.project, ref:"Not written", edited:false });
+  refreshAfterChange(id);
+  toast("Draft rejected. Nothing was written to Procore.");
+}
+
+/* ============================================================
+   CLIPBOARD (iframe-safe)
+   ============================================================ */
+async function copyText(text){
+  try{
+    if (navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch(_){ /* fall through to execCommand */ }
+  try{
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly","");
+    ta.style.position = "fixed";
+    ta.style.top = "-1000px";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch(_){ return false; }
+}
+function selectNode(el){
+  try{
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    const s = window.getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+  } catch(_){}
+}
+
+/* ============================================================
+   TOASTS
+   ============================================================ */
+function toast(msg){
+  const host = $("#toastHost");
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = msg;
+  host.appendChild(t);
+  while (host.children.length > 3) host.firstChild.remove();
+  setTimeout(() => t.remove(), 4200);
+}
+
+/* ============================================================
+   EVENTS (delegated, so re-rendered content needs no rebinding)
+   ============================================================ */
+document.addEventListener("click", async e => {
+  const el = e.target.closest("[data-action]");
+  if (!el || el.disabled) return;
+  const a = el.dataset.action;
+
+  switch(a){
+    case "ms-signin":
+      toast("In production, this redirects to Microsoft Entra ID through Cloudflare Access. For this demo, choose a sample user below.");
+      break;
+    case "signin":     await signIn(el.dataset.user, el); break;
+    case "signout":    signOut(); break;
+    case "nav":        go(el.dataset.view); break;
+    case "goto": {
+      const link = el.dataset.link || "";
+      if (link.startsWith("view:")) go(link.slice(5));
+      else openDrawer(link, el);
+      break;
+    }
+    case "open-item":  openDrawer(el.dataset.id, el); break;
+    case "close-drawer": closeDrawer(); break;
+    case "filter":
+      state.filters[el.dataset.key] = el.dataset.value;
+      renderMain();
+      break;
+    case "approve":     await approveItem(state.openId); break;
+    case "show-return": state.noteMode = "return"; renderDrawerFoot(findItem(state.openId)); break;
+    case "show-reject": state.noteMode = "reject"; renderDrawerFoot(findItem(state.openId)); break;
+    case "cancel-note": state.noteMode = null;     renderDrawerFoot(findItem(state.openId)); break;
+    case "confirm-return": await returnItem(state.openId); break;
+    case "confirm-reject": await rejectItem(state.openId); break;
+    case "chat-send":    await sendChat(($("#chatInput") || {}).value); break;
+    case "chat-suggest": await sendChat(el.dataset.q); break;
+    case "chat-clear":
+      if (state.chat.busy) break;
+      state.chat.messages = [];
+      state.chat.draft = "";
+      { const i = $("#chatInput"); if (i) { i.value = ""; i.focus(); } }
+      renderChatLog(); updateChatControls();
+      break;
+    case "copy-prompt": {
+      const node = $(`#prompt-${el.dataset.idx}`);
+      const ok = await copyText(node.textContent);
+      if (ok) toast("Prompt copied. Paste it into Claude.");
+      else { selectNode(node); toast("Copy is blocked here. The prompt is selected; press Ctrl+C or Cmd+C."); }
+      break;
+    }
+    case "toast": toast(el.dataset.msg); break;
+  }
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && state.openId){ e.preventDefault(); closeDrawer(); return; }
+  if (e.target && e.target.id === "chatInput" && e.key === "Enter" && !e.shiftKey && !e.isComposing){
+    e.preventDefault();
+    sendChat(e.target.value);
+    return;
+  }
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("tr[data-action]")){
+    e.preventDefault();
+    e.target.click();
+  }
+  /* Keep Tab focus inside the open drawer */
+  if (e.key === "Tab" && state.openId){
+    const f = Array.from($("#drawer").querySelectorAll('button:not([disabled]),textarea:not([disabled]),input:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])'));
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  }
+});
+
+document.addEventListener("input", e => {
+  if (e.target.id === "draftText" && state.openId){
+    const item = findItem(state.openId);
+    item.bodyCurrent = e.target.value;
+    const flag = $("#editedFlag");
+    if (flag) flag.hidden = item.bodyCurrent === fillDates(item.body);
+  }
+  if (e.target.id === "chatInput"){
+    state.chat.draft = e.target.value;
+    e.target.style.height = "auto";
+    e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px";
+  }
+});
+
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.matches("[data-verify]") && state.openId){
+    const id = state.openId;
+    state.verify[id] = state.verify[id] || {};
+    state.verify[id][t.dataset.verify] = t.checked;
+    const item = findItem(id);
+    const ready = verifyComplete(item);
+    const btn = $("#approveBtn"), hint = $("#footHint");
+    if (btn) btn.disabled = !ready;
+    if (hint) hint.textContent = ready
+      ? "Writes to Procore under your name. In this demo, nothing is sent."
+      : "Confirm each point above to enable approval.";
+  }
+  if (t.id === "qType"){ state.filters.qType = t.value; renderMain(); }
+  if (t.id === "askProject"){ state.askProject = t.value; renderMain(); }
+});
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+renderLogin();
+</script>
+</body>
+</html>
