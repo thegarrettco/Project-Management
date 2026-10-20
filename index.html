@@ -12,12 +12,18 @@
 
 <!--
   ============================================================
-  TGC PROJECT PORTAL — SHELL v0.4.2
+  TGC PROJECT PORTAL — SHELL v0.4.3
   ============================================================
   HOW TO PREVIEW
     Paste this entire file into the w3schools Tryit editor
     (https://www.w3schools.com/html/tryit.asp?filename=tryhtml_default)
     and click Run. Everything is inline; nothing to install.
+
+  WHAT CHANGED IN v0.4.3
+    • Title case on page titles, panel/section titles, sidebar labels,
+      starter prompt titles and review drawer section titles.
+    • Top Actions (and the corporate Flagged panel) reworked: baseline-aligned
+      numerals, project label on the right, hairline rows, codes kept on one line.
 
   WHAT CHANGED IN v0.4.2
     • Favicon added (same image as the EG Executive Dashboard).
@@ -374,21 +380,26 @@ a{color:var(--accent-text)}
   font-size:.74rem;padding:.25rem .55rem;border-radius:8px;white-space:nowrap;
 }
 
-/* Top actions — numbered because it IS a ranked sequence */
-.action-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
-.action{
-  display:flex;gap:.75rem;align-items:flex-start;width:100%;text-align:left;
-  background:var(--surface-2);border:1px solid transparent;border-radius:12px;
-  padding:.72rem .85rem;cursor:pointer;
+/* Top actions — numbered because it IS a ranked sequence.
+   The numeral shares the text’s baseline, so it lines up exactly with the
+   first line in any font; the project sits as a quiet label on the right. */
+.todo-list{list-style:none;margin:0;padding:0}
+.todo-list li + li{border-top:1px solid var(--border)}
+.todo{
+  display:grid;grid-template-columns:1.5rem minmax(0,1fr) auto;column-gap:.85rem;
+  align-items:baseline;width:100%;text-align:left;cursor:pointer;
+  background:transparent;border:0;border-radius:10px;padding:.8rem .65rem;
 }
-.action:hover{border-color:var(--border-strong)}
-.action-rank{
-  width:24px;height:24px;border-radius:50%;flex-shrink:0;
-  background:var(--blue);color:#fff;font-size:.74rem;font-weight:700;
-  display:grid;place-items:center;margin-top:1px;
+.todo.no-rank{grid-template-columns:minmax(0,1fr) auto}
+.todo:hover{background:var(--surface-2)}
+.todo-rank{
+  font-size:1.05rem;font-weight:700;line-height:1.4;color:var(--accent-text);
+  font-variant-numeric:tabular-nums;text-align:right;
 }
-.action-text{font-size:.88rem;font-weight:500;color:var(--text);line-height:1.4}
-.action-meta{display:flex;gap:.5rem;align-items:center;margin-top:.25rem}
+.todo-text{font-size:.9rem;font-weight:500;line-height:1.45;color:var(--text)}
+.todo-side{display:flex;flex-direction:column;align-items:flex-end;gap:.3rem}
+.todo-proj{font-size:.76rem;font-weight:600;line-height:1.45;color:var(--muted);white-space:nowrap}
+.nowrap{white-space:nowrap}
 
 /* Level A automation runs */
 .run{display:flex;align-items:center;gap:.75rem;padding:.62rem 0;border-bottom:1px solid var(--border)}
@@ -698,6 +709,13 @@ textarea.draft:disabled{background:var(--surface-2);color:var(--muted)}
 }
 @media (max-width:520px){
   .brand-name{display:none}
+  /* Phones: project label moves above the action so the text gets full width */
+  .todo{grid-template-columns:1.5rem minmax(0,1fr);grid-template-areas:". proj" "rank text";row-gap:.1rem}
+  .todo-rank{grid-area:rank}
+  .todo-text{grid-area:text}
+  .todo-proj{grid-area:proj;text-align:left}
+  .todo.no-rank{grid-template-columns:minmax(0,1fr);grid-template-areas:"side" "text";row-gap:.3rem}
+  .todo.no-rank .todo-side{grid-area:side;flex-direction:row;align-items:center;justify-content:flex-start;gap:.5rem}
 }
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation:none !important;transition:none !important}
@@ -1175,13 +1193,13 @@ const ACTIVITY = [
 
 /* Starter prompts for longer work in Claude itself (from the PE / APM guide, Section 3) */
 const PROMPTS = [
-  { title:"Daily digest",        sop:"8.7.13", text:(p,all)=>`For ${all}, read yesterday’s superintendent daily reports. Give me one page per job: work completed, manpower by trade vs. plan, delays and causes, safety or inspection items, and anything that threatens the schedule. Put a top-5 action list across all jobs at the top.` },
-  { title:"Change order draft",  sop:"8.3.11", text:(p)=>`Using the attached field tickets and the email thread with [Sub] on ${p}, draft a change order per SOP 8.3.11. Check pricing against the unit rates in their subcontract and against prior COs on this job. List anything that looks out of scope, duplicated or unsupported. When it’s ready, submit it to my approval queue.` },
-  { title:"Pay app review",      sop:"8.1.13", text:(p)=>`Review [Sub]’s pay app #[n] for ${p}. Reconcile against the approved SOV, prior billings, approved COs, retainage terms, lien waiver status and COI status. Compare % complete to the latest daily logs and site captures. Return an exceptions list and a recommended approve / hold / adjust amount.` },
-  { title:"RFI draft",           sop:"8.5.02", text:(p)=>`The superintendent on ${p} reports: [field issue]. Find the relevant drawing sheets and spec sections, then draft an RFI per SOP 8.5.02 with the question, references, a proposed solution, and the schedule impact if unanswered in 5 days. Submit it to my approval queue.` },
+  { title:"Daily Digest",        sop:"8.7.13", text:(p,all)=>`For ${all}, read yesterday’s superintendent daily reports. Give me one page per job: work completed, manpower by trade vs. plan, delays and causes, safety or inspection items, and anything that threatens the schedule. Put a top-5 action list across all jobs at the top.` },
+  { title:"Change Order Draft",  sop:"8.3.11", text:(p)=>`Using the attached field tickets and the email thread with [Sub] on ${p}, draft a change order per SOP 8.3.11. Check pricing against the unit rates in their subcontract and against prior COs on this job. List anything that looks out of scope, duplicated or unsupported. When it’s ready, submit it to my approval queue.` },
+  { title:"Pay App Review",      sop:"8.1.13", text:(p)=>`Review [Sub]’s pay app #[n] for ${p}. Reconcile against the approved SOV, prior billings, approved COs, retainage terms, lien waiver status and COI status. Compare % complete to the latest daily logs and site captures. Return an exceptions list and a recommended approve / hold / adjust amount.` },
+  { title:"RFI Draft",           sop:"8.5.02", text:(p)=>`The superintendent on ${p} reports: [field issue]. Find the relevant drawing sheets and spec sections, then draft an RFI per SOP 8.5.02 with the question, references, a proposed solution, and the schedule impact if unanswered in 5 days. Submit it to my approval queue.` },
   { title:"Cost at Complete",    sop:"8.4.04", text:(p)=>`Build this month’s Cost at Complete for ${p} from the Sage job cost export, open commitments and pending change events. Show variance to last month by cost code and explain any movement over $[threshold].` },
-  { title:"Back charge package", sop:"8.3.15", text:(p)=>`Assemble a back-charge package against [Sub] on ${p} for [issue]: relevant contract clauses, notices sent, daily log entries, photos, and a cost calculation. Draft the notice letter and submit it to my approval queue.` },
-  { title:"Meeting minutes",     sop:"8.2.05", text:(p)=>`From the attached Teams transcript for ${p}, write minutes using the Procore meeting template: decisions, action items with owner and due date, and open items carried forward.` }
+  { title:"Back Charge Package", sop:"8.3.15", text:(p)=>`Assemble a back-charge package against [Sub] on ${p} for [issue]: relevant contract clauses, notices sent, daily log entries, photos, and a cost calculation. Draft the notice letter and submit it to my approval queue.` },
+  { title:"Meeting Minutes",     sop:"8.2.05", text:(p)=>`From the attached Teams transcript for ${p}, write minutes using the Procore meeting template: decisions, action items with owner and due date, and open items carried forward.` }
 ];
 
 /* ============================================================
@@ -1234,6 +1252,10 @@ function dueLabel(offset){
 function cacDeltaText(p){
   if (p.cacDelta === 0) return "no change";
   return (p.cacDelta > 0 ? "up " : "down ") + fmtMoney(Math.abs(p.cacDelta));
+}
+/* Escape text, then keep reference codes (FT-2236, RFI #088, Pay App #6, Building 4, Unit B2) from splitting across lines */
+function keepCodesTogether(s){
+  return esc(s).replace(/\b([A-Z]{1,4}-\d+|(?:RFI|Pay App|CE|BC) #\d+|Buildings? \d+|Unit [A-Z]?\d+)/g, '<span class="nowrap">$1</span>');
 }
 function flagCount(item){ return item.checks.filter(c => c[0] !== "ok").length; }
 function needsVerify(item){ return item.amount != null && item.amount >= CONFIG.approvalFrictionThreshold && item.verify.length > 0; }
@@ -1346,8 +1368,8 @@ function logActivity(entry){ state.data.activity.unshift(Object.assign({ when:`T
 function navItems(){
   return [
     { id:"today",       label:"Today",                                  icon:"today" },
-    { id:"approvals",   label: isCorp() ? "In review" : "Approvals",    icon: isCorp() ? "review" : "approvals", badge: !isCorp() },
-    { id:"projects",    label: isCorp() ? "All projects" : "My projects", icon:"projects" },
+    { id:"approvals",   label: isCorp() ? "In Review" : "Approvals",    icon: isCorp() ? "review" : "approvals", badge: !isCorp() },
+    { id:"projects",    label: isCorp() ? "All Projects" : "My Projects", icon:"projects" },
     { id:"deadlines",   label:"Deadlines",                              icon:"deadlines" },
     { sep:true },
     { id:"ask",         label:"Ask Claude",                             icon:"ask" },
@@ -1451,7 +1473,7 @@ const VIEWS = {
 function render(){ renderNav(); renderMain(); }
 function renderMain(){
   const fn = VIEWS[state.view] || viewToday;
-  $("#main").innerHTML = fn() + `<p class="foot">Project Portal shell v0.4.2. Sample data for preview only.</p>`;
+  $("#main").innerHTML = fn() + `<p class="foot">Project Portal shell v0.4.3. Sample data for preview only.</p>`;
   if (state.view === "ask") afterAskRender();
 }
 function go(view){
@@ -1479,7 +1501,7 @@ function viewToday(){
   const d = state.data, u = state.user, corp = isCorp();
   const pending = d.queue.filter(q => q.status === "pending");
   const hour = new Date().getHours();
-  const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const greet = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
   const dateLine = TODAY.toLocaleDateString("en-US", { weekday:"long", month:"long", day:"numeric", year:"numeric" });
   const nextDeadline = d.deadlines.slice().sort((a,b) => a.offset - b.offset)[0];
   const behind = d.projects.filter(p => p.sched > 0);
@@ -1542,16 +1564,17 @@ function viewToday(){
   const left = corp ? `
     <section class="panel" aria-labelledby="flagsTitle">
       <div class="panel-head">
-        <h3 id="flagsTitle">Flagged in last night’s digest</h3>
+        <h3 id="flagsTitle">Flagged in Last Night’s Digest</h3>
         <span class="badge">As of 5:30 AM</span>
       </div>
-      <ul class="action-list">
+      <ul class="todo-list">
         ${d.projects.map(p => `
           <li>
-            <button type="button" class="action" data-action="nav" data-view="projects">
-              <span>
-                <span class="action-text">${esc(fillDates(p.flag))}</span>
-                <span class="action-meta"><span class="proj-tag">${esc(p.name)}</span><span class="pill ${schedLabel(p.sched).cls}">${esc(schedLabel(p.sched).text)}</span></span>
+            <button type="button" class="todo no-rank" data-action="nav" data-view="projects">
+              <span class="todo-text">${keepCodesTogether(fillDates(p.flag))}</span>
+              <span class="todo-side">
+                <span class="todo-proj">${esc(p.name)}</span>
+                <span class="pill ${schedLabel(p.sched).cls}">${esc(schedLabel(p.sched).text)}</span>
               </span>
             </button>
           </li>`).join("")}
@@ -1559,17 +1582,15 @@ function viewToday(){
     </section>` : `
     <section class="panel" aria-labelledby="topActionsTitle">
       <div class="panel-head">
-        <h3 id="topActionsTitle">Top actions across your projects</h3>
+        <h3 id="topActionsTitle">Top Actions Across Your Projects</h3>
         <span class="badge">Prepared 5:30 AM</span>
       </div>
-      ${d.actions.length ? `<ol class="action-list">${d.actions.slice(0,5).map((a,i) => `
+      ${d.actions.length ? `<ol class="todo-list">${d.actions.slice(0,5).map((a,i) => `
         <li>
-          <button type="button" class="action" data-action="goto" data-link="${esc(a.link)}">
-            <span class="action-rank">${i+1}</span>
-            <span>
-              <span class="action-text">${esc(fillDates(a.text))}</span>
-              <span class="action-meta"><span class="proj-tag">${esc(projectName(a.project))}</span></span>
-            </span>
+          <button type="button" class="todo" data-action="goto" data-link="${esc(a.link)}">
+            <span class="todo-rank" aria-hidden="true">${i+1}</span>
+            <span class="todo-text">${keepCodesTogether(fillDates(a.text))}</span>
+            <span class="todo-proj">${esc(projectName(a.project))}</span>
           </button>
         </li>`).join("")}</ol>` : `<div class="empty"><strong>No actions today</strong>The overnight digest found nothing that needs you.</div>`}
     </section>`;
@@ -1617,7 +1638,7 @@ function viewToday(){
         ${left}
         <section class="panel" aria-labelledby="runsTitle">
           <div class="panel-head">
-            <h3 id="runsTitle">Ran overnight</h3>
+            <h3 id="runsTitle">Ran Overnight</h3>
             <span class="panel-note">Level A, spot-check weekly</span>
           </div>
           ${runs}
@@ -1625,7 +1646,7 @@ function viewToday(){
       </div>
     </div>
 
-    <h3 class="section-title">Project pulse from last night’s daily logs</h3>
+    <h3 class="section-title">Project Pulse from Last Night’s Daily Logs</h3>
     <div class="table-wrap">
       <table class="data">
         <thead><tr><th>Project</th><th>Complete</th><th>Manpower today</th><th>Schedule</th><th>Last daily log</th><th>From the digest</th></tr></thead>
@@ -1686,7 +1707,7 @@ function viewApprovals(){
 
   return `
     <div class="page-head">
-      <h2>${corp ? "In review" : "Approval queue"}</h2>
+      <h2>${corp ? "In Review" : "Approval Queue"}</h2>
       <p>${corp ? "Drafts project teams are reviewing. View only." : "Claude prepares. You decide. Nothing reaches Procore until you approve it."}</p>
     </div>
 
@@ -1702,7 +1723,7 @@ function viewApprovals(){
       ${open.length ? table(open) : empty}
     </div>
 
-    ${done.length ? `<h3 class="section-title" style="margin-top:2rem">Completed this session</h3>${table(done)}` : ""}`;
+    ${done.length ? `<h3 class="section-title" style="margin-top:2rem">Completed This Session</h3>${table(done)}` : ""}`;
 }
 
 /* ============================================================
@@ -1740,7 +1761,7 @@ function viewProjects(){
 
   return `
     <div class="page-head">
-      <h2>${corp ? "All projects" : "My projects"}</h2>
+      <h2>${corp ? "All Projects" : "My Projects"}</h2>
       <p>${corp ? `${state.data.projects.length} active projects, view only` : `${plural(state.data.projects.length,"project")} assigned to you`}</p>
     </div>
     <div class="project-grid">${cards}</div>`;
@@ -1823,7 +1844,7 @@ function viewAsk(){
     <div class="wrap">
       <section class="panel chat" aria-labelledby="chatTitle">
         <div class="panel-head">
-          <h3 id="chatTitle">Ask about ${corp ? "the portfolio" : "your projects"}</h3>
+          <h3 id="chatTitle">Ask About ${corp ? "the Portfolio" : "Your Projects"}</h3>
           <span style="display:flex;gap:.5rem;align-items:center">
             <span class="pill" id="chatStatus"></span>
             <button type="button" class="btn btn-secondary btn-sm" data-action="chat-clear">Clear</button>
@@ -1874,7 +1895,7 @@ function viewAsk(){
     </div>
     ${chat}
 
-    <h3 class="section-title" style="margin-top:2rem">Starter prompts for longer work in Claude</h3>
+    <h3 class="section-title" style="margin-top:2rem">Starter Prompts for Longer Work in Claude</h3>
     <div class="callout">
       <p>Use these in Claude for drafting that needs attachments or several steps. When a draft is finished, Claude submits it to your approval queue, and it reaches Procore only after you approve it here.</p>
     </div>
@@ -2327,7 +2348,7 @@ function renderDrawerBody(item){
   if (item.status === "processing" || item.status === "written"){
     statusBlock = `
       <section>
-        <h4 class="block-title">Write-back to Procore</h4>
+        <h4 class="block-title">Write-Back to Procore</h4>
         <div class="pipeline">
           ${item.pipeline.map(s => `
             <div class="step ${s.state}">
@@ -2348,7 +2369,7 @@ function renderDrawerBody(item){
 
   const verifyBlock = (editable && needsVerify(item)) ? `
     <section class="verify" aria-labelledby="verifyTitle">
-      <h4 class="block-title" id="verifyTitle" style="margin-bottom:.3rem">Confirm before approving</h4>
+      <h4 class="block-title" id="verifyTitle" style="margin-bottom:.3rem">Confirm Before Approving</h4>
       <p>Items of ${esc(fmtMoney(CONFIG.approvalFrictionThreshold))} or more need each point confirmed.</p>
       ${item.verify.map((v, i) => `
         <label><input type="checkbox" data-verify="${i}"${(state.verify[item.id] || {})[i] ? " checked" : ""}> <span>${esc(v)}</span></label>`).join("")}
@@ -2357,17 +2378,17 @@ function renderDrawerBody(item){
   $("#drawerBody").innerHTML = `
     ${statusBlock}
     <section>
-      <h4 class="block-title">Key details</h4>
+      <h4 class="block-title">Key Details</h4>
       <div class="fields">
         ${item.fields.map(f => `<div class="field"><div class="k">${esc(f[0])}</div><div class="v">${esc(fillDates(f[1]))}</div></div>`).join("")}
       </div>
     </section>
     <section>
-      <h4 class="block-title"><label for="draftText">Draft${editable ? " (you can edit)" : ""}</label><span class="edited-flag" id="editedFlag"${edited ? "" : " hidden"}>Edited</span></h4>
+      <h4 class="block-title"><label for="draftText">Draft${editable ? " (You Can Edit)" : ""}</label><span class="edited-flag" id="editedFlag"${edited ? "" : " hidden"}>Edited</span></h4>
       <textarea class="draft" id="draftText"${editable ? "" : " disabled"}>${esc(body)}</textarea>
     </section>
     <section>
-      <h4 class="block-title">What Claude checked</h4>
+      <h4 class="block-title">What Claude Checked</h4>
       <ul class="checks">
         ${item.checks.map(c => `<li class="check"><span class="check-ic ${c[0]}" aria-hidden="true">${icon[c[0]]}</span><span><span class="sr-only">${c[0] === "ok" ? "Passed: " : c[0] === "warn" ? "Flag: " : "Failed: "}</span>${esc(fillDates(c[1]))}</span></li>`).join("")}
       </ul>
