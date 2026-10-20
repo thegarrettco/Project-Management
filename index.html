@@ -1647,7 +1647,7 @@ function renderScopeChips(){
   const box = $("#scopeChips");
   if (!box || !state.data) return;
   if (isCorp()){
-    box.innerHTML = `<span class="scope-label">Access</span><button type="button" class="scope-chip" data-action="nav" data-view="projects">All ${state.data.projects.length} projects, view only</button>`;
+    box.innerHTML = `<span class="scope-label">Access</span><button type="button" class="scope-chip" data-action="nav" data-view="projects">All ${state.data.projects.length} Projects, View Only</button>`;
     return;
   }
   box.innerHTML = `<span class="scope-label">My Projects</span>` + state.data.projects.map(p => {
@@ -1861,7 +1861,7 @@ function viewToday(){
         <section class="panel" aria-labelledby="runsTitle">
           <div class="panel-head">
             <h3 id="runsTitle">Ran Overnight</h3>
-            <span class="panel-note">Level A, spot-check weekly</span>
+            <span class="panel-note">Level A, Spot-Check Weekly</span>
           </div>
           ${runs}
         </section>
