@@ -1520,18 +1520,18 @@ function viewToday(){
     <section class="hero" aria-label="Portfolio at a glance">
       <div>
         <div class="hero-count">${d.projects.length}</div>
-        <p class="hero-line">active projects in the portfolio</p>
+        <p class="hero-line">Active Projects in the Portfolio</p>
         <p class="hero-next">${behind.length ? `${plural(behind.length,"project")} behind schedule (${esc(behind.map(p => p.name).join(", "))}).` : "Every project is on or ahead of schedule."} ${plural(pending.length,"draft")} with project teams for review. ${urgent}</p>
       </div>
       <div class="hero-actions">
-        <button type="button" class="btn btn-gold" data-action="nav" data-view="ask">Ask Claude about the portfolio</button>
-        <button type="button" class="btn btn-ghost" data-action="nav" data-view="projects">View all projects</button>
+        <button type="button" class="btn btn-gold" data-action="nav" data-view="ask">Questions? Ask Claude</button>
+        <button type="button" class="btn btn-ghost" data-action="nav" data-view="projects">View All Projects</button>
       </div>
     </section>` : `
     <section class="hero" aria-label="Waiting on you">
       <div>
         <div class="hero-count">${pending.length}</div>
-        <p class="hero-line">${pending.length ? `${pending.length === 1 ? "draft is" : "drafts are"} ready for your decision` : "Nothing is waiting on you"}</p>
+        <p class="hero-line">${pending.length ? `${pending.length === 1 ? "draft is" : "Drafts Are"} Ready for Your Decision` : "Nothing is Waiting on You"}</p>
         <p class="hero-next">${urgent}</p>
       </div>
       <div class="hero-actions">
