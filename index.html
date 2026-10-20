@@ -1447,7 +1447,7 @@ function renderChrome(){
   $("#userRole").textContent = u.role;
   $("#scopeChips").innerHTML = isCorp()
     ? `<span class="scope-label">Access</span><span class="scope-chip">All ${state.data.projects.length} projects, view only</span>`
-    : `<span class="scope-label">My projects</span>` + state.data.projects.map(p => `<span class="scope-chip">${esc(p.name)}</span>`).join("");
+    : `<span class="scope-label">My Projects</span>` + state.data.projects.map(p => `<span class="scope-chip">${esc(p.name)}</span>`).join("");
 }
 
 function renderNav(){
