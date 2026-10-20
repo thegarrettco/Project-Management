@@ -12,12 +12,25 @@
 
 <!--
   ============================================================
-  TGC PROJECT PORTAL — SHELL v0.4.3
+  TGC PROJECT PORTAL — SHELL v0.5
   ============================================================
   HOW TO PREVIEW
     Paste this entire file into the w3schools Tryit editor
     (https://www.w3schools.com/html/tryit.asp?filename=tryhtml_default)
     and click Run. Everything is inline; nothing to install.
+
+  WHAT CHANGED IN v0.5
+    • My Projects: “View in Executive Dashboard” now shows for corporate
+      users only. “Open in Procore” stays for everyone.
+    • New project page, for project and corporate users alike. Open it by
+      clicking a project card, a project listed under My Projects in the
+      sidebar, a project chip in the header, or a project row on Today.
+      It shows a project snapshot, that project’s approvals, Procore details
+      (RFIs, submittals, change events, commitments, daily log), the
+      project’s deadlines, and a DroneDeploy gallery like the EG dashboard.
+    • DroneDeploy gallery reads from the EG dashboard Worker’s existing
+      /drone endpoint (read only), using the same project IDs and photo
+      groups. If the preview can’t reach it, a labeled fallback shows.
 
   WHAT CHANGED IN v0.4.3
     • Title case on page titles, panel/section titles, sidebar labels,
@@ -45,7 +58,9 @@
 
   WHAT IS REAL vs. SAMPLE
     • UI, navigation, review drawer, approval flow, chat UI: real shell behavior.
-    • All data (users, projects, drafts, deadlines): SAMPLE ONLY.
+    • All data (users, projects, drafts, deadlines, Procore details): SAMPLE ONLY.
+    • DroneDeploy gallery: LIVE when the EG dashboard Worker is reachable,
+      otherwise a labeled fallback.
     • Sign-in and Procore write-back: SIMULATED. Nothing is sent anywhere.
 
   ASK CLAUDE: HOW ANSWERS ARE PRODUCED
@@ -65,11 +80,14 @@
     • Clipboard copy falls back to execCommand inside iframes.
     • External resources: Google Fonts (Poppins) and your existing
       Wix-hosted logos and textures, each with a plain-color fallback.
+    • The project page makes read-only requests to the EG dashboard
+      Worker for DroneDeploy photos. Set CONFIG.droneMode = "off" to skip them.
 
   SECURITY NOTE FOR PRODUCTION
     • The Worker decides who sees what and who can approve. The client-side
-      checks here (scoping, corporate view-only) mirror that behavior for the
-      preview only. Never rely on them for security.
+      checks here (scoping, corporate view-only, the corporate-only Executive
+      Dashboard link) mirror that behavior for the preview only. Never rely
+      on them for security.
   ============================================================
 -->
 
@@ -115,6 +133,7 @@
   --auth-bg:linear-gradient(135deg,rgba(20,48,75,.99) 0%,rgba(15,36,56,.995) 55%,rgba(8,20,32,1) 100%);
   --shadow:0 4px 12px rgba(0,0,0,.05);
   --shadow-lg:0 24px 60px rgba(0,0,0,.28);
+  --overlay:rgba(248,249,251,.84);   /* gallery loading / unavailable overlay */
 
   --chrome-h:108px;   /* topbar 76 + banner 32 */
   color-scheme:light;
@@ -141,6 +160,7 @@
 
     /* The body texture is a light-paper image, so it is switched off in dark mode */
     --tex-body:none;
+    --overlay:rgba(23,30,39,.84);
 
     --shadow:0 4px 14px rgba(0,0,0,.35);
     color-scheme:dark;
@@ -277,6 +297,10 @@ a{color:var(--accent-text)}
   background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
   border-radius:999px;padding:.18rem .62rem;
 }
+/* Header project chips are buttons that open the project page */
+button.scope-chip{cursor:pointer;color:#fff;line-height:1.4}
+button.scope-chip:hover{background:rgba(255,255,255,.22)}
+button.scope-chip.active{background:var(--gold);border-color:var(--gold);color:#1e1e1e;font-weight:600}
 .user-box{display:flex;align-items:center;gap:.65rem}
 .user-box .u-text{display:flex;flex-direction:column;justify-content:center;gap:1px;line-height:1.15}
 .user-box .u-name{font-size:.86rem;font-weight:600;white-space:nowrap}
@@ -311,10 +335,28 @@ a{color:var(--accent-text)}
 .nav-item svg{width:20px;height:20px;flex-shrink:0}
 .nav-item:hover{background:var(--surface-2);color:var(--heading)}
 .nav-item.active{background:var(--accent-soft);color:var(--accent-text);font-weight:600}
+.nav-item.active-parent{color:var(--accent-text);font-weight:600}
 .nav-badge{
   margin-left:auto;background:var(--gold);color:#1e1e1e;
   font-size:.72rem;font-weight:700;border-radius:999px;
   padding:.05rem .5rem;min-width:22px;text-align:center;
+}
+/* Projects listed under My Projects / All Projects (a guide line runs under the icon) */
+.nav-sub-list{
+  display:flex;flex-direction:column;gap:.1rem;
+  margin:.05rem 0 .35rem 1.375rem;padding-left:.45rem;border-left:1px solid var(--border);
+}
+.nav-sub{
+  display:flex;align-items:center;gap:.5rem;width:100%;
+  padding:.4rem .65rem;border:0;border-radius:8px;background:transparent;
+  color:var(--muted);font-size:.84rem;font-weight:500;cursor:pointer;text-align:left;
+}
+.nav-sub:hover{background:var(--surface-2);color:var(--heading)}
+.nav-sub.active{background:var(--accent-soft);color:var(--accent-text);font-weight:600}
+.nav-sub-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-sub-count{
+  margin-left:auto;flex-shrink:0;font-size:.68rem;font-weight:700;
+  background:var(--surface-2);color:var(--heading);border-radius:999px;padding:0 .45rem;
 }
 .nav-sep{height:1px;background:var(--border);margin:.6rem .5rem}
 .nav-foot{margin-top:auto;font-size:.72rem;color:var(--muted);padding:.75rem .75rem .25rem;line-height:1.45}
@@ -448,6 +490,7 @@ table.data tr.clickable{cursor:pointer}
 table.data tr.clickable:hover td,
 table.data tr.clickable:focus-visible td{background:var(--surface-2)}
 table.data tr.clickable:focus-visible{outline:none}
+table.data tr.total-row td{background:var(--surface-3);font-weight:700;color:var(--heading)}
 .num{font-variant-numeric:tabular-nums;white-space:nowrap}
 .strong{font-weight:600;color:var(--heading)}
 .muted{color:var(--muted)}
@@ -494,8 +537,13 @@ table.data tr.clickable:focus-visible{outline:none}
    PROJECT CARDS
    ============================================================ */
 .project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(450px,1fr));gap:1.25rem}
+/* The whole card opens the project page; the title is the keyboard target */
+.project-card{cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease}
+.project-card:hover{border-color:var(--border-strong);box-shadow:0 6px 18px rgba(0,0,0,.08)}
 .project-card .panel-head{margin-bottom:0}
 .project-card h3{margin:0;font-size:1.15rem;color:var(--heading)}
+.card-title-btn{border:0;background:transparent;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.card-title-btn:hover{color:var(--accent-text)}
 .project-loc{font-size:.82rem;color:var(--muted);margin:.1rem 0 .8rem}
 .project-team{font-size:.78rem;color:var(--muted);margin:.85rem 0 0}
 .metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem;margin:1rem 0}
@@ -505,6 +553,64 @@ table.data tr.clickable:focus-visible{outline:none}
 .metric-v.neg{color:var(--neg)}
 .metric-v.pos{color:var(--pos)}
 .card-actions{display:flex;gap:.5rem;flex-wrap:wrap}
+
+/* ============================================================
+   PROJECT PAGE
+   ============================================================ */
+.back-link{
+  display:inline-flex;align-items:center;gap:.35rem;border:0;background:transparent;
+  color:var(--accent-text);font-size:.84rem;font-weight:600;cursor:pointer;
+  padding:.2rem 0;margin:0 0 .6rem;
+}
+.back-link:hover{text-decoration:underline}
+.detail-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem}
+.detail-actions{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.stack{display:flex;flex-direction:column;gap:1.5rem}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.45rem 1.1rem;margin:0;font-size:.86rem}
+.kv dt{color:var(--muted);font-size:.8rem;line-height:1.5}
+.kv dd{margin:0;color:var(--text);line-height:1.5}
+.log-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:1.25rem;margin-bottom:1rem}
+.log-notes{margin:0;padding-left:1.1rem;font-size:.86rem;line-height:1.55}
+.log-notes li + li{margin-top:.25rem}
+
+/* DroneDeploy gallery (same behavior as the EG dashboard gallery card) */
+.gallery{
+  position:relative;min-height:320px;min-width:0;border-radius:16px;overflow:hidden;
+  background:var(--surface-2);border:1px solid var(--border);box-shadow:var(--shadow);
+}
+.gallery-img,.gallery-bg{position:absolute;inset:0;width:100%;height:100%}
+.gallery-img{object-fit:cover;display:block}
+.gallery-bg{background-size:cover;background-position:center}
+.gallery-label,.gallery-count,.gallery-status{
+  position:absolute;z-index:2;background:rgba(15,34,52,.72);color:#fff;
+  font-size:.72rem;font-weight:600;padding:.25rem .6rem;border-radius:8px;
+}
+.gallery-label{top:12px;left:12px;font-weight:700}
+.gallery-count{bottom:12px;right:12px;font-variant-numeric:tabular-nums}
+.gallery-status{bottom:12px;left:12px;max-width:calc(100% - 100px);font-weight:500;line-height:1.35}
+.gallery-badge{
+  position:absolute;z-index:2;top:12px;right:12px;
+  background:#fff2d9;color:#1e1e1e;font-weight:700;font-size:.74rem;
+  padding:.25rem .55rem;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.12);
+}
+.gallery-nav{
+  position:absolute;z-index:2;top:50%;transform:translateY(-50%);
+  width:40px;height:40px;border:0;border-radius:12px;cursor:pointer;
+  background:rgba(0,0,0,.42);color:#fff;font-size:1.1rem;display:grid;place-items:center;
+}
+.gallery-nav:hover{background:rgba(0,0,0,.6)}
+.gallery-nav.prev{left:10px}
+.gallery-nav.next{right:10px}
+.gallery-overlay{
+  position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:.75rem;padding:1.5rem;text-align:center;
+  background:var(--overlay);color:var(--heading);font-size:.88rem;font-weight:600;
+}
+.gallery-spinner{
+  width:34px;height:34px;border-radius:50%;
+  border:3px solid var(--accent-soft);border-top-color:var(--blue);
+  animation:spin .8s linear infinite;
+}
 
 /* ============================================================
    ASK CLAUDE — CHAT + STARTER PROMPTS
@@ -693,7 +799,7 @@ textarea.draft:disabled{background:var(--surface-2);color:var(--muted)}
   }
   .nav-item{width:auto;flex-shrink:0;padding:.5rem .75rem;font-size:.82rem}
   .nav-item svg{width:18px;height:18px}
-  .nav-sep,.nav-foot{display:none}
+  .nav-sep,.nav-foot,.nav-sub-list{display:none}
   .hero{grid-template-columns:1fr;padding:1.4rem}
   .hero-count{font-size:2.6rem}
   .strip{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -706,6 +812,8 @@ textarea.draft:disabled{background:var(--surface-2);color:var(--muted)}
   .conn{grid-template-columns:1fr}
   .conn-right{align-items:flex-start;flex-direction:row}
   .msg{max-width:94%}
+  .log-grid{grid-template-columns:1fr}
+  .gallery{min-height:260px}
 }
 @media (max-width:520px){
   .brand-name{display:none}
@@ -831,7 +939,10 @@ const CONFIG = {
   claudeModel: "claude-sonnet-4-6",                  // used only for the in-preview direct call
   approvalFrictionThreshold: 25000,                  // items at or above this need explicit confirmations
   dashboardUrl: "https://thegarrettco.github.io/EG-Executive-Dashboard/",  // confirm before go-live
-  claudeUrl: "https://claude.ai/new"
+  claudeUrl: "https://claude.ai/new",
+  droneMode: "auto",                                 // "auto" reads DroneDeploy through the Worker below; "off" shows the fallback
+  droneWorkerUrl: "https://eg-executive-dashboard.bshives.workers.dev/drone",  // same read-only endpoint the EG dashboard uses
+  droneTimeoutMs: 12000
 };
 
 /* ============================================================
@@ -1203,6 +1314,87 @@ const PROMPTS = [
 ];
 
 /* ============================================================
+   PROJECT PAGE — SAMPLE PROCORE DETAIL INPUTS
+   The project page builds RFIs, submittals, change events,
+   commitments and the daily log from these pools so the counts
+   always match the project card (open RFIs, aged RFIs, overdue
+   submittals, change exposure, manpower). DETAIL_SEEDS pins the
+   items named elsewhere in the sample data (RFI #088, Summit
+   Interior Systems, the window package submittal, and so on).
+   In production, the Worker returns the real Procore records.
+   ============================================================ */
+const DETAIL_SEEDS = {
+  fillmore:   { commitments:[{ no:"SC-0112", vendor:"Front Range Earthworks", trade:"Earthwork", value:2864000, billed:96 }] },
+  parkerii:   { submittals:[{ spec:"08 51 13", title:"Window package", reviewer:"Architect", status:"With reviewer", dueOffset:3 }] },
+  knoxville:  {
+    rfis:[{ no:88, subject:"Supply duct routing at the Building 2 corridor", bic:"MEP engineer", days:8 }],
+    commitments:[
+      { no:"SC-0204", vendor:"Summit Interior Systems", trade:"Drywall", value:1284000, billed:50 },
+      { no:"SC-0211", vendor:"Peak Mechanical",         trade:"HVAC",    value:2215000, billed:36 }
+    ]
+  },
+  forumii:    { commitments:[{ no:"SC-0187", vendor:"Gulf Coast Roofing", trade:"Roofing", value:1462000, billed:84 }] },
+  emblemmesa: {
+    submittals:[{ spec:"26 56 00", title:"Site lighting fixtures", reviewer:"Electrical engineer", status:"With reviewer", dueOffset:4 }],
+    commitments:[{ no:"SC-0143", vendor:"Desert Line Framing", trade:"Framing", value:3920000, billed:94 }]
+  }
+};
+const RFI_SUBJECTS = [
+  "Window head flashing at the stucco transition", "Guardrail height at the stair landing",
+  "Sprinkler main conflict with the corridor soffit", "Roof drain location at Building 3",
+  "Shear wall nailing at the garage openings", "Firestop product substitution",
+  "Unit entry door hardware set", "Pool equipment pad dimensions",
+  "Electrical meter bank clearance", "Balcony waterproofing termination",
+  "Dumpster enclosure gate swing", "Ceiling height at the mechanical chase",
+  "Retaining wall drainage at the east property line", "Elevator pit sump requirement"
+];
+const BALL_IN_COURT = ["Architect", "MEP engineer", "Structural engineer", "Civil engineer", "Owner"];
+const REVIEWERS = ["Architect", "MEP engineer", "Structural engineer", "Civil engineer", "Interior designer"];
+const SUBMITTAL_POOL = [
+  ["08 51 13","Vinyl windows"], ["09 30 00","Tile and setting materials"], ["22 40 00","Plumbing fixtures"],
+  ["23 81 26","Split system units"], ["26 51 00","Interior lighting fixtures"], ["07 31 13","Asphalt shingles"],
+  ["10 14 00","Unit signage"], ["32 31 13","Chain link fencing"], ["12 35 30","Kitchen cabinets"],
+  ["06 17 53","Floor trusses"], ["08 71 00","Door hardware"], ["09 91 00","Paint color schedule"]
+];
+const CHANGE_POOL = [
+  ["Owner-requested amenity upgrades","Owner request"], ["Utility relocation at the north entry","Unforeseen condition"],
+  ["Fire marshal plan comments","Code / AHJ comment"], ["Added storm inlet at the east drive","Design revision"],
+  ["Revised unit finish package","Owner request"], ["Stair tower guardrail clarification","Design clarification"],
+  ["Added downspout drainage tie-ins","Design revision"], ["Transformer pad relocation","Utility requirement"]
+];
+const CE_STATUSES = ["Pricing requested", "Under review", "Awaiting owner direction", "Priced, pending CO"];
+const VENDOR_POOL = [
+  ["Rocky Ridge Concrete","Concrete"], ["Apex Plumbing","Plumbing"], ["Brightline Electric","Electrical"],
+  ["Keystone Framing","Framing"], ["Summit Paint Co.","Painting"], ["Western Fire Protection","Fire sprinklers"],
+  ["Mesa Landscape Group","Landscaping"], ["Pinnacle Windows","Windows"], ["Cornerstone Masonry","Masonry"],
+  ["High Plains Mechanical","HVAC"], ["Tri-County Drywall","Drywall"]
+];
+const TRADE_POOL = ["Framing","Electrical","Plumbing","HVAC","Drywall","Roofing","Concrete","Painting","Site work","Fire sprinklers","Landscaping"];
+const WEATHER = ["Clear, 68°F", "Partly cloudy, 74°F", "Overcast, 61°F", "Clear and windy, 79°F", "Sunny, 84°F"];
+const LOG_NOTES = [
+  "Material deliveries received as scheduled.", "Housekeeping walk completed at end of shift.",
+  "City inspector on site for scheduled inspections.", "Toolbox talk held on ladder safety."
+];
+
+/* DroneDeploy projects: same project IDs and photo groups as the EG Executive Dashboard */
+const DRONE_PROJECTS = {
+  fillmore:      { projectId:"Project:6734c6e392d961845d31a8de", group:"Photos Plan" },
+  parkerii:      { projectId:"Project:67b4978aa5781fbfde2efc0a", group:"Photo Group #1" },
+  knoxville:     { projectId:"Project:673511badf261631b885b373", group:"Photos Plan 2" },
+  forumii:       { projectId:"Project:66a7b550d3bdfd5ad36b159f", group:"Photos Plan" },
+  uptowncommons: { projectId:"Project:66d86f392d6ab0bc05d3f37a", group:"Photo Group #1" },
+  emblemmesa:    { projectId:"Project:66b0ce0d79e6b866bc965f27", group:"Photo Group #1" }
+};
+/* Shown when DroneDeploy can’t be reached (same fallback images the EG dashboard uses) */
+const FALLBACK_RENDERINGS = {
+  emblemmesa: [
+    "https://static.wixstatic.com/media/4f7dd4_b8e32391bceb4e59b327f3fc09e2a930~mv2.png",
+    "https://static.wixstatic.com/media/4f7dd4_61f93fdbb7004815b0c56a7e0aacf182~mv2.png"
+  ]
+};
+const GALLERY_PLACEHOLDER = "https://static.wixstatic.com/media/4f7dd4_1d0a37bcff554582b2b4220b84dc3a34~mv2.png?w=1200&q=80";
+
+/* ============================================================
    HELPERS
    ============================================================ */
 const $ = (sel, root) => (root || document).querySelector(sel);
@@ -1354,6 +1546,7 @@ const state = {
   verify:{},
   filters:{ qProject:"all", qType:"all", dType:"all" },
   askProject:null,
+  projectKey:null, projectTab:"rfis",   // project page: which project, which Procore tab
   chat: freshChat()
 };
 function isCorp(){ return !!(state.user && state.user.access === "corporate"); }
@@ -1409,6 +1602,7 @@ async function signIn(userId, btn){
       user, data, view:"today", openId:null, noteMode:null, verify:{},
       filters:{ qProject:"all", qType:"all", dType:"all" },
       askProject: data.projects[0].key,
+      projectKey:null, projectTab:"rfis",
       chat: freshChat()
     });
     $("#loginView").hidden = true;
@@ -1428,7 +1622,7 @@ async function signIn(userId, btn){
 
 function signOut(){
   closeDrawer(true);
-  Object.assign(state, { user:null, data:null, view:"today", openId:null, noteMode:null, verify:{}, chat:freshChat() });
+  Object.assign(state, { user:null, data:null, view:"today", openId:null, noteMode:null, verify:{}, projectKey:null, projectTab:"rfis", chat:freshChat() });
   $("#shellView").hidden = true;
   $("#loginView").hidden = false;
   window.scrollTo(0,0);
@@ -1445,9 +1639,21 @@ function renderChrome(){
   av.classList.toggle("corp", isCorp());
   $("#userName").textContent = u.name;
   $("#userRole").textContent = u.role;
-  $("#scopeChips").innerHTML = isCorp()
-    ? `<span class="scope-label">Access</span><span class="scope-chip">All ${state.data.projects.length} projects, view only</span>`
-    : `<span class="scope-label">My Projects</span>` + state.data.projects.map(p => `<span class="scope-chip">${esc(p.name)}</span>`).join("");
+  renderScopeChips();
+}
+
+/* Header access chips. Project users get one button per project (opens the project page). */
+function renderScopeChips(){
+  const box = $("#scopeChips");
+  if (!box || !state.data) return;
+  if (isCorp()){
+    box.innerHTML = `<span class="scope-label">Access</span><button type="button" class="scope-chip" data-action="nav" data-view="projects">All ${state.data.projects.length} projects, view only</button>`;
+    return;
+  }
+  box.innerHTML = `<span class="scope-label">My Projects</span>` + state.data.projects.map(p => {
+    const on = state.view === "project" && state.projectKey === p.key;
+    return `<button type="button" class="scope-chip${on ? " active" : ""}" data-action="open-project" data-key="${esc(p.key)}"${on ? ' aria-current="page"' : ""}>${esc(p.name)}</button>`;
+  }).join("");
 }
 
 function renderNav(){
@@ -1458,23 +1664,39 @@ function renderNav(){
   $("#sidenav").innerHTML = navItems().map(n => {
     if (n.sep) return `<div class="nav-sep" role="separator"></div>`;
     const active = state.view === n.id;
+    const parent = n.id === "projects" && state.view === "project";
     const badge = n.badge && pending ? `<span class="nav-badge" aria-label="${pending} waiting">${pending}</span>` : "";
-    return `<button type="button" class="nav-item${active ? " active" : ""}" data-action="nav" data-view="${n.id}"${active ? ' aria-current="page"' : ""}>${ICONS[n.icon]}<span>${esc(n.label)}</span>${badge}</button>`;
+    return `<button type="button" class="nav-item${active ? " active" : ""}${parent ? " active-parent" : ""}" data-action="nav" data-view="${n.id}"${active ? ' aria-current="page"' : ""}>${ICONS[n.icon]}<span>${esc(n.label)}</span>${badge}</button>` +
+      (n.id === "projects" ? projectSubNav() : "");
   }).join("") + `<div class="nav-foot">${esc(foot)}</div>`;
+}
+
+/* Projects listed under My Projects / All Projects in the sidebar */
+function projectSubNav(){
+  return `<div class="nav-sub-list" role="group" aria-label="${isCorp() ? "All projects" : "My projects"}">` +
+    state.data.projects.map(p => {
+      const on = state.view === "project" && state.projectKey === p.key;
+      const count = isCorp() ? 0 : state.data.queue.filter(q => q.project === p.key && q.status === "pending").length;
+      return `<button type="button" class="nav-sub${on ? " active" : ""}" data-action="open-project" data-key="${esc(p.key)}"${on ? ' aria-current="page"' : ""}>` +
+        `<span class="nav-sub-name">${esc(p.name)}</span>` +
+        (count ? `<span class="nav-sub-count" aria-label="${count} waiting">${count}</span>` : "") +
+        `</button>`;
+    }).join("") + `</div>`;
 }
 
 /* ============================================================
    RENDER ROUTER
    ============================================================ */
 const VIEWS = {
-  today: viewToday, approvals: viewApprovals, projects: viewProjects,
+  today: viewToday, approvals: viewApprovals, projects: viewProjects, project: viewProject,
   deadlines: viewDeadlines, ask: viewAsk, activity: viewActivity, connections: viewConnections
 };
-function render(){ renderNav(); renderMain(); }
+function render(){ renderNav(); renderScopeChips(); renderMain(); }
 function renderMain(){
   const fn = VIEWS[state.view] || viewToday;
-  $("#main").innerHTML = fn() + `<p class="foot">Project Portal shell v0.4.3. Sample data for preview only.</p>`;
+  $("#main").innerHTML = fn() + `<p class="foot">Project Portal shell v0.5. Sample data for preview only.</p>`;
   if (state.view === "ask") afterAskRender();
+  if (state.view === "project") afterProjectRender();
 }
 function go(view){
   state.view = view;
@@ -1570,7 +1792,7 @@ function viewToday(){
       <ul class="todo-list">
         ${d.projects.map(p => `
           <li>
-            <button type="button" class="todo no-rank" data-action="nav" data-view="projects">
+            <button type="button" class="todo no-rank" data-action="open-project" data-key="${esc(p.key)}">
               <span class="todo-text">${keepCodesTogether(fillDates(p.flag))}</span>
               <span class="todo-side">
                 <span class="todo-proj">${esc(p.name)}</span>
@@ -1587,7 +1809,7 @@ function viewToday(){
       </div>
       ${d.actions.length ? `<ol class="todo-list">${d.actions.slice(0,5).map((a,i) => `
         <li>
-          <button type="button" class="todo" data-action="goto" data-link="${esc(a.link)}">
+          <button type="button" class="todo" data-action="goto" data-link="${esc(a.link)}" data-project="${esc(a.project)}">
             <span class="todo-rank" aria-hidden="true">${i+1}</span>
             <span class="todo-text">${keepCodesTogether(fillDates(a.text))}</span>
             <span class="todo-proj">${esc(projectName(a.project))}</span>
@@ -1614,7 +1836,7 @@ function viewToday(){
     const s = schedLabel(p.sched);
     const short = p.manpower[0] < p.manpower[1] * 0.95;
     return `
-      <tr class="clickable" tabindex="0" data-action="nav" data-view="projects">
+      <tr class="clickable" tabindex="0" data-action="open-project" data-key="${esc(p.key)}" aria-label="Open ${esc(p.name)}">
         <td class="strong">${esc(p.name)}</td>
         <td><div class="bar-row"><div class="bar" aria-hidden="true"><span style="width:${p.pct}%"></span></div><span class="num">${p.pct}%</span></div></td>
         <td class="num"><span class="pill${short ? " warn" : ""}">${p.manpower[0]} of ${p.manpower[1]} planned</span></td>
@@ -1656,6 +1878,41 @@ function viewToday(){
 }
 
 /* ============================================================
+   APPROVAL TABLES (shared by the Approvals page and the project page)
+   ============================================================ */
+function queueStatusPill(q){
+  if (q.status === "returned")   return `<span class="pill info">Claude is revising</span>`;
+  if (q.status === "pending")    return isCorp() ? `<span class="pill">With project team</span>` : `<span class="pill">Waiting on you</span>`;
+  if (q.status === "rejected")   return `<span class="pill neg">Rejected</span>`;
+  if (q.status === "processing") return `<span class="pill info">Writing to Procore</span>`;
+  return `<span class="pill pos">In Procore, ${esc(q.procoreRef)}</span>`;
+}
+
+function queueTable(items, opts){
+  const showProject = !(opts && opts.hideProject);
+  const row = q => {
+    const flags = flagCount(q);
+    return `
+      <tr class="clickable" tabindex="0" data-action="open-item" data-id="${esc(q.id)}">
+        <td><div class="strong">${esc(fillDates(q.title))}</div><div class="muted small">SOP ${esc(q.sop)}${q.revision > 1 ? `, revision ${q.revision}` : ""}</div></td>
+        ${showProject ? `<td><span class="proj-tag">${esc(projectName(q.project))}</span></td>` : ""}
+        <td><span class="tag">${esc(q.type)}</span></td>
+        <td class="num">${q.amount != null ? fmtMoney(q.amount, true) : '<span class="muted">—</span>'}</td>
+        <td>${flags ? `<span class="pill warn">${plural(flags,"flag")}</span>` : `<span class="pill pos">Clean</span>`}</td>
+        <td class="muted small">${esc(q.prepared)}</td>
+        <td>${queueStatusPill(q)}</td>
+      </tr>`;
+  };
+  return `
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Draft</th>${showProject ? "<th>Project</th>" : ""}<th>Type</th><th>Amount</th><th>Claude’s checks</th><th>Prepared</th><th>Status</th></tr></thead>
+        <tbody>${items.map(row).join("")}</tbody>
+      </table>
+    </div>`;
+}
+
+/* ============================================================
    VIEW: APPROVALS / IN REVIEW
    ============================================================ */
 function viewApprovals(){
@@ -1670,36 +1927,6 @@ function viewApprovals(){
     <span class="filters-label">Project</span>
     <button type="button" class="chip${f.qProject === "all" ? " active" : ""}" data-action="filter" data-key="qProject" data-value="all">All</button>
     ${d.projects.map(p => `<button type="button" class="chip${f.qProject === p.key ? " active" : ""}" data-action="filter" data-key="qProject" data-value="${esc(p.key)}">${esc(p.name)}</button>`).join("")}` : "";
-
-  const statusPill = q => {
-    if (q.status === "returned")   return `<span class="pill info">Claude is revising</span>`;
-    if (q.status === "pending")    return corp ? `<span class="pill">With project team</span>` : `<span class="pill">Waiting on you</span>`;
-    if (q.status === "rejected")   return `<span class="pill neg">Rejected</span>`;
-    if (q.status === "processing") return `<span class="pill info">Writing to Procore</span>`;
-    return `<span class="pill pos">In Procore, ${esc(q.procoreRef)}</span>`;
-  };
-
-  const row = q => {
-    const flags = flagCount(q);
-    return `
-      <tr class="clickable" tabindex="0" data-action="open-item" data-id="${esc(q.id)}">
-        <td><div class="strong">${esc(fillDates(q.title))}</div><div class="muted small">SOP ${esc(q.sop)}${q.revision > 1 ? `, revision ${q.revision}` : ""}</div></td>
-        <td><span class="proj-tag">${esc(projectName(q.project))}</span></td>
-        <td><span class="tag">${esc(q.type)}</span></td>
-        <td class="num">${q.amount != null ? fmtMoney(q.amount, true) : '<span class="muted">—</span>'}</td>
-        <td>${flags ? `<span class="pill warn">${plural(flags,"flag")}</span>` : `<span class="pill pos">Clean</span>`}</td>
-        <td class="muted small">${esc(q.prepared)}</td>
-        <td>${statusPill(q)}</td>
-      </tr>`;
-  };
-
-  const table = items => `
-    <div class="table-wrap">
-      <table class="data">
-        <thead><tr><th>Draft</th><th>Project</th><th>Type</th><th>Amount</th><th>Claude’s checks</th><th>Prepared</th><th>Status</th></tr></thead>
-        <tbody>${items.map(row).join("")}</tbody>
-      </table>
-    </div>`;
 
   const empty = corp
     ? `<div class="empty"><strong>Nothing in review</strong>Drafts Claude prepares for project teams will appear here.</div>`
@@ -1720,40 +1947,55 @@ function viewApprovals(){
           ${types.map(t => `<option value="${esc(t)}"${f.qType === t ? " selected" : ""}>${esc(t)}</option>`).join("")}
         </select>
       </div>
-      ${open.length ? table(open) : empty}
+      ${open.length ? queueTable(open) : empty}
     </div>
 
-    ${done.length ? `<h3 class="section-title" style="margin-top:2rem">Completed This Session</h3>${table(done)}` : ""}`;
+    ${done.length ? `<h3 class="section-title" style="margin-top:2rem">Completed This Session</h3>${queueTable(done)}` : ""}`;
 }
 
 /* ============================================================
    VIEW: PROJECTS
    ============================================================ */
+/* Shared project buttons. "View in Executive Dashboard" is for corporate users only. */
+function procoreButton(p){
+  return `<button type="button" class="btn btn-secondary btn-sm" data-action="toast" data-msg="In production, this opens ${esc(p.name)} directly in Procore${isCorp() ? " with read-only access" : ""}.">Open in Procore</button>`;
+}
+function dashboardLink(){
+  if (!isCorp()) return "";
+  return `<a class="btn btn-secondary btn-sm" href="${esc(CONFIG.dashboardUrl)}" target="_blank" rel="noopener" data-action="external">View in Executive Dashboard</a>`;
+}
+function cacDeltaMetric(p){
+  return {
+    cls: p.cacDelta > 0 ? "neg" : p.cacDelta < 0 ? "pos" : "",
+    text: p.cacDelta === 0 ? "No change" : (p.cacDelta > 0 ? "+" : "−") + fmtMoney(Math.abs(p.cacDelta))
+  };
+}
+
 function viewProjects(){
   const corp = isCorp();
   const cards = state.data.projects.map(p => {
     const s = schedLabel(p.sched);
-    const deltaCls = p.cacDelta > 0 ? "neg" : p.cacDelta < 0 ? "pos" : "";
-    const deltaTxt = p.cacDelta === 0 ? "No change" : (p.cacDelta > 0 ? "+" : "−") + fmtMoney(Math.abs(p.cacDelta));
+    const delta = cacDeltaMetric(p);
     return `
-      <article class="panel project-card">
+      <article class="panel project-card" data-action="open-project" data-key="${esc(p.key)}">
         <div class="panel-head">
-          <h3>${esc(p.name)}</h3>
+          <h3><button type="button" class="card-title-btn" data-action="open-project" data-key="${esc(p.key)}">${esc(p.name)}</button></h3>
           <span class="pill ${s.cls}">${esc(s.text)}</span>
         </div>
         <p class="project-loc">${esc(p.location)}, ${esc(p.phase.toLowerCase())}</p>
         <div class="bar-row"><div class="bar" style="flex:1" aria-hidden="true"><span style="width:${p.pct}%"></span></div><span class="num small strong">${p.pct}% complete</span></div>
         <div class="metrics">
           <div class="metric"><div class="metric-k">Cost at Complete</div><div class="metric-v">${fmtCompact(p.cac)}</div></div>
-          <div class="metric"><div class="metric-k">CAC vs. last month</div><div class="metric-v ${deltaCls}">${deltaTxt}</div></div>
+          <div class="metric"><div class="metric-k">CAC vs. last month</div><div class="metric-v ${delta.cls}">${delta.text}</div></div>
           <div class="metric"><div class="metric-k">Change exposure</div><div class="metric-v">${fmtCompact(p.exposure)}</div></div>
           <div class="metric"><div class="metric-k">Open RFIs</div><div class="metric-v">${p.openRfis}${p.agedRfis ? ` <span class="small muted">(${p.agedRfis} aged)</span>` : ""}</div></div>
           <div class="metric"><div class="metric-k">Overdue submittals</div><div class="metric-v ${p.overdueSubmittals ? "neg" : ""}">${p.overdueSubmittals}</div></div>
           <div class="metric"><div class="metric-k">Final CO</div><div class="metric-v">${fmtDate(addDays(p.finalCo))}</div></div>
         </div>
         <div class="card-actions">
-          <button type="button" class="btn btn-secondary btn-sm" data-action="toast" data-msg="In production, this opens ${esc(p.name)} directly in Procore${corp ? " with read-only access" : ""}.">Open in Procore</button>
-          <a class="btn btn-secondary btn-sm" href="${esc(CONFIG.dashboardUrl)}" target="_blank" rel="noopener">View in Executive Dashboard</a>
+          <button type="button" class="btn btn-primary btn-sm" data-action="open-project" data-key="${esc(p.key)}">View Project</button>
+          ${procoreButton(p)}
+          ${dashboardLink()}
         </div>
         <p class="project-team">Project team: ${esc(p.team.length ? p.team.join(", ") : "Not assigned")}</p>
       </article>`;
@@ -1765,6 +2007,555 @@ function viewProjects(){
       <p>${corp ? `${state.data.projects.length} active projects, view only` : `${plural(state.data.projects.length,"project")} assigned to you`}</p>
     </div>
     <div class="project-grid">${cards}</div>`;
+}
+
+/* ============================================================
+   VIEW: PROJECT PAGE
+   Opens from a project card, a project under My Projects in the
+   sidebar, a project chip in the header, or a project row on Today.
+   Same page for project and corporate users; corporate stays
+   view only (the drawer and Worker enforce that).
+   ============================================================ */
+function openProject(key){
+  if (!state.data || !state.data.projects.some(p => p.key === key)) return;
+  if (state.projectKey !== key) state.projectTab = "rfis";
+  state.projectKey = key;
+  go("project");
+}
+function afterProjectRender(){
+  if (state.projectKey) loadGallery(state.projectKey);
+}
+
+function viewProject(){
+  const d = state.data, corp = isCorp();
+  const p = d.projects.find(x => x.key === state.projectKey);
+  if (!p) return viewProjects();
+
+  const s = schedLabel(p.sched);
+  const delta = cacDeltaMetric(p);
+  const short = p.manpower[0] < p.manpower[1] * 0.95;
+  const team = p.team.length ? p.team.join(", ") : "Not assigned";
+
+  const items = d.queue.filter(q => q.project === p.key);
+  const open = items.filter(q => q.status === "pending" || q.status === "returned");
+  const done = items.filter(q => open.indexOf(q) === -1);
+  const pending = items.filter(q => q.status === "pending").length;
+  const approvalsBadge = pending ? (corp ? `${pending} with project team` : `${pending} waiting on you`) : "Caught up";
+
+  const deadlines = d.deadlines.filter(x => x.project === p.key).sort((a,b) => a.offset - b.offset);
+  const deadlineRows = deadlines.map(x => {
+    const l = dueLabel(x.offset);
+    return `
+      <tr>
+        <td class="num strong">${fmtDate(addDays(x.offset))}</td>
+        <td><span class="pill ${l.cls}">${esc(l.text)}</span></td>
+        <td><span class="tag">${esc(x.type)}</span></td>
+        <td>${esc(x.title)}</td>
+        <td class="muted small">${esc(x.source)}</td>
+      </tr>`;
+  }).join("");
+
+  return `
+    <button type="button" class="back-link" data-action="nav" data-view="projects"><span aria-hidden="true">←</span> ${corp ? "All Projects" : "My Projects"}</button>
+    <div class="page-head detail-head">
+      <div>
+        <h2>${esc(p.name)}</h2>
+        <p>${esc(p.location)}, ${esc(p.phase.toLowerCase())}</p>
+      </div>
+      <div class="detail-actions">
+        ${procoreButton(p)}
+        ${dashboardLink()}
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <section class="panel" aria-labelledby="snapTitle">
+        <div class="panel-head">
+          <h3 id="snapTitle">Project Snapshot</h3>
+          <span class="pill ${s.cls}">${esc(s.text)}</span>
+        </div>
+        <div class="bar-row"><div class="bar" style="flex:1" aria-hidden="true"><span style="width:${p.pct}%"></span></div><span class="num small strong">${p.pct}% complete</span></div>
+        <div class="metrics">
+          <div class="metric"><div class="metric-k">Cost at Complete</div><div class="metric-v">${fmtCompact(p.cac)}</div></div>
+          <div class="metric"><div class="metric-k">CAC vs. last month</div><div class="metric-v ${delta.cls}">${delta.text}</div></div>
+          <div class="metric"><div class="metric-k">Change exposure</div><div class="metric-v">${fmtCompact(p.exposure)}</div></div>
+          <div class="metric"><div class="metric-k">Open RFIs</div><div class="metric-v">${p.openRfis}${p.agedRfis ? ` <span class="small muted">(${p.agedRfis} aged)</span>` : ""}</div></div>
+          <div class="metric"><div class="metric-k">Overdue submittals</div><div class="metric-v ${p.overdueSubmittals ? "neg" : ""}">${p.overdueSubmittals}</div></div>
+          <div class="metric"><div class="metric-k">Final CO</div><div class="metric-v">${fmtDate(addDays(p.finalCo))}</div></div>
+        </div>
+        <dl class="kv">
+          <dt>Manpower last night</dt><dd><span class="pill${short ? " warn" : ""}">${p.manpower[0]} of ${p.manpower[1]} planned</span></dd>
+          <dt>Last daily log</dt><dd>${esc(p.lastLog)}</dd>
+          <dt>From the digest</dt><dd>${keepCodesTogether(fillDates(p.flag))}</dd>
+          <dt>Project team</dt><dd>${esc(team)}</dd>
+        </dl>
+      </section>
+      <section class="gallery" id="projGallery" aria-label="DroneDeploy site captures for ${esc(p.name)}">${galleryInner(p.key)}</section>
+    </div>
+
+    <div class="stack">
+      <section class="panel" aria-labelledby="projApprovalsTitle">
+        <div class="panel-head">
+          <h3 id="projApprovalsTitle">${corp ? "Drafts in Review" : "Approvals for This Project"}</h3>
+          <span class="badge">${esc(approvalsBadge)}</span>
+        </div>
+        ${items.length
+          ? queueTable(open.concat(done), { hideProject:true })
+          : `<div class="empty"><strong>No drafts for this project</strong>Drafts Claude prepares for ${esc(p.name)} will appear here.</div>`}
+        ${corp && items.length ? `<p class="panel-note" style="margin:.75rem 0 0">View only. The project team approves drafts: ${esc(team)}.</p>` : ""}
+      </section>
+
+      <section class="panel" aria-labelledby="procoreTitle">
+        <div class="panel-head">
+          <h3 id="procoreTitle">Procore Details</h3>
+          <span class="panel-note">Sample data; read from Procore in production</span>
+        </div>
+        <div id="procorePanel">${procorePanelHtml(p)}</div>
+      </section>
+
+      <section class="panel" aria-labelledby="projDeadlinesTitle">
+        <div class="panel-head">
+          <h3 id="projDeadlinesTitle">Deadlines</h3>
+          <button type="button" class="btn btn-secondary btn-sm" data-action="nav" data-view="deadlines">All deadlines</button>
+        </div>
+        ${deadlines.length ? `
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>Due</th><th>Timing</th><th>Type</th><th>Item</th><th>Source</th></tr></thead>
+            <tbody>${deadlineRows}</tbody>
+          </table>
+        </div>` : `<div class="empty"><strong>No tracked deadlines</strong>Notices, insurance, bond and closeout dates for ${esc(p.name)} will appear here.</div>`}
+      </section>
+    </div>`;
+}
+
+/* ------------------------------------------------------------
+   Sample Procore details, generated deterministically per project
+   (the same project always shows the same records).
+   ------------------------------------------------------------ */
+function seededRandom(str){
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return function(){
+    h = (h + 0x6D2B79F5) >>> 0;
+    let t = h;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function shuffled(arr, rnd){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(rnd() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; }
+  return a;
+}
+
+const detailCache = {};
+function projectDetails(p){
+  if (detailCache[p.key]) return detailCache[p.key];
+  const rnd = seededRandom(p.key);
+  const int = (min, max) => min + Math.floor(rnd() * (max - min + 1));
+  const any = arr => arr[Math.floor(rnd() * arr.length)];
+  const seeds = DETAIL_SEEDS[p.key] || {};
+
+  /* RFIs — count and aging match the project card; a response is due 7 days after opening */
+  const subjects = shuffled(RFI_SUBJECTS, rnd);
+  const rfiSeeds = seeds.rfis || [];
+  const rfiBase = int(100, 140);
+  const rfis = [];
+  for (let i = 0; i < p.openRfis; i++){
+    const sd = rfiSeeds[i];
+    const days = sd ? sd.days : (i < p.agedRfis ? int(8, 19) : int(1, 6));
+    rfis.push({
+      no: sd ? sd.no : rfiBase + i,
+      subject: sd ? sd.subject : subjects[i % subjects.length],
+      bic: sd ? sd.bic : any(BALL_IN_COURT),
+      days, dueOffset: 7 - days
+    });
+  }
+  rfis.sort((a,b) => b.days - a.days);
+
+  /* Submittals — overdue count matches the project card */
+  const subSeeds = seeds.submittals || [];
+  const subPool = shuffled(SUBMITTAL_POOL.filter(x => !subSeeds.some(sd => sd.spec === x[0])), rnd);
+  const submittals = [];
+  for (let i = 0; i < p.overdueSubmittals && subPool.length; i++){
+    const x = subPool.shift();
+    submittals.push({ spec:x[0], title:x[1], rev:int(0,1), reviewer:any(REVIEWERS), status:"Overdue", dueOffset:-int(1,6) });
+  }
+  subSeeds.forEach(sd => submittals.push(Object.assign({ rev:0 }, sd)));
+  const extra = int(2, 4);
+  for (let i = 0; i < extra && subPool.length; i++){
+    const x = subPool.shift();
+    const status = any(["With reviewer","Approved","Approved as noted","Revise and resubmit"]);
+    submittals.push({
+      spec:x[0], title:x[1], reviewer:any(REVIEWERS), status,
+      rev: status === "Revise and resubmit" ? 1 : int(0,1),
+      dueOffset: status === "With reviewer" ? int(8, 14) : -int(2, 15)
+    });
+  }
+  /* Open items first (overdue, then with reviewer by due date), then returned items, newest first */
+  const rank = sb => sb.status === "Overdue" ? 0 : sb.status === "With reviewer" ? 1 : 2;
+  submittals.sort((a,b) => rank(a) - rank(b) || (rank(a) < 2 ? a.dueOffset - b.dueOffset : b.dueOffset - a.dueOffset));
+
+  /* Change events — drafts already in the queue, plus open events, total = card exposure */
+  const linked = QUEUE.filter(q => q.project === p.key && q.amount != null && (q.type === "Change order" || q.type === "Change event"));
+  const changes = linked.map(q => ({
+    ce:null, title:fillDates(q.title), amount:q.amount, queueId:q.id,
+    reason: q.type === "Change order" ? "Field condition" : "Code / AHJ comment"
+  }));
+  let remaining = p.exposure - sum(changes, "amount");
+  const ceTitles = shuffled(CHANGE_POOL, rnd);
+  const ceCount = remaining <= 0 ? 0 : remaining < 30000 ? 1 : remaining < 150000 ? 2 : 3;
+  for (let i = 0; i < ceCount; i++){
+    const t = ceTitles[i];
+    const amt = i === ceCount - 1 ? remaining : Math.round(remaining * (0.35 + rnd() * 0.25) / 100) * 100;
+    remaining -= amt;
+    changes.push({ ce:null, title:t[0], reason:t[1], amount:amt, status:any(CE_STATUSES) });
+  }
+  let ceNo = int(18, 40);
+  changes.forEach(c => { if (!c.queueId) c.ce = `CE #${ceNo++}`; });
+
+  /* Commitments — known subcontracts first, then trades not already covered */
+  const known = (seeds.commitments || []).map(c => Object.assign({}, c));
+  const usedTrades = known.map(c => c.trade);
+  const usedNos = known.map(c => c.no);
+  const vendors = shuffled(VENDOR_POOL.filter(v => usedTrades.indexOf(v[1]) === -1), rnd);
+  const commitments = known;
+  let sc = int(120, 160);
+  while (commitments.length < 5 && vendors.length){
+    const v = vendors.shift();
+    while (usedNos.indexOf(`SC-0${sc}`) !== -1) sc++;
+    commitments.push({
+      no:`SC-0${sc}`, vendor:v[0], trade:v[1],
+      value: Math.round(p.cac * (0.025 + rnd() * 0.06) / 1000) * 1000,
+      billed: Math.max(5, Math.min(100, Math.round(p.pct + rnd() * 30 - 15)))
+    });
+    usedNos.push(`SC-0${sc}`);
+    sc += int(4, 19);
+  }
+  commitments.forEach(c => { c.retainage = Math.round(c.value * c.billed / 100 * 0.10); });
+  commitments.sort((a,b) => b.value - a.value);
+
+  /* Daily log — crew totals match last night’s manpower; the lead trade carries the shortfall */
+  const lead = /framing|vertical/i.test(p.phase) ? "Framing"
+    : /interior/i.test(p.phase) ? "Drywall"
+    : /envelope/i.test(p.phase) ? "Roofing"
+    : /closeout/i.test(p.phase) ? "Painting" : "Framing";
+  const trades = [lead].concat(shuffled(TRADE_POOL.filter(t => t !== lead), rnd).slice(0, 4));
+  const weights = trades.map((_, i) => i === 0 ? 4 : 1 + rnd() * 2);
+  const wSum = weights.reduce((a, w) => a + w, 0);
+  const plan = weights.map(w => Math.round(p.manpower[1] * w / wSum));
+  plan[0] += p.manpower[1] - plan.reduce((a, x) => a + x, 0);
+  const onSite = plan.slice();
+  onSite[0] += p.manpower[0] - p.manpower[1];
+  const dailyLog = {
+    logged: p.lastLog, weather: any(WEATHER),
+    crews: trades.map((t, i) => ({ trade:t, onSite:onSite[i], plan:plan[i] })),
+    notes: [fillDates(p.flag) + ".", "No safety incidents or near misses reported.", any(LOG_NOTES)]
+  };
+
+  return (detailCache[p.key] = { rfis, submittals, changes, commitments, dailyLog });
+}
+
+const PROCORE_TABS = [
+  ["rfis","RFIs"], ["submittals","Submittals"], ["changes","Change Events"],
+  ["commitments","Commitments"], ["dailylog","Daily Log"]
+];
+
+function procorePanelHtml(p){
+  const det = projectDetails(p);
+  const counts = { rfis:det.rfis.length, submittals:det.submittals.length, changes:det.changes.length, commitments:det.commitments.length };
+  const tab = PROCORE_TABS.some(t => t[0] === state.projectTab) ? state.projectTab : "rfis";
+  const tabs = `<div class="filters" role="tablist" aria-label="Procore details">` + PROCORE_TABS.map(t => {
+    const on = t[0] === tab;
+    const n = counts[t[0]];
+    return `<button type="button" class="chip${on ? " active" : ""}" role="tab" id="ptab-${t[0]}" aria-selected="${on}" aria-controls="ptabPanel" data-action="proj-tab" data-tab="${t[0]}">${esc(t[1])}${n != null ? ` (${n})` : ""}</button>`;
+  }).join("") + `</div>`;
+
+  let body = "";
+  if (tab === "rfis") body = rfiTable(det.rfis);
+  else if (tab === "submittals") body = submittalTable(det.submittals);
+  else if (tab === "changes") body = changeTable(det.changes);
+  else if (tab === "commitments") body = commitmentTable(det.commitments);
+  else body = dailyLogHtml(det.dailyLog);
+
+  return tabs + `<div id="ptabPanel" role="tabpanel" aria-labelledby="ptab-${tab}">${body}</div>`;
+}
+
+function rfiTable(list){
+  if (!list.length) return `<div class="empty"><strong>No open RFIs</strong>Every RFI on this project has a response.</div>`;
+  return `
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>RFI</th><th>Subject</th><th>Ball in court</th><th>Opened</th><th>Response due</th><th>Timing</th></tr></thead>
+        <tbody>${list.map(r => {
+          const l = dueLabel(r.dueOffset);
+          return `
+          <tr>
+            <td class="num strong">RFI #${String(r.no).padStart(3, "0")}</td>
+            <td>${esc(r.subject)}</td>
+            <td>${esc(r.bic)}</td>
+            <td class="num">${fmtDate(addDays(-r.days))}</td>
+            <td class="num">${fmtDate(addDays(r.dueOffset))}</td>
+            <td><span class="pill ${l.cls}">${esc(l.text)}</span></td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table>
+    </div>`;
+}
+
+function submittalTable(list){
+  if (!list.length) return `<div class="empty"><strong>No submittals in progress</strong>New submittals appear here once they’re logged in Procore.</div>`;
+  const pill = sb => {
+    if (sb.status === "Overdue") return `<span class="pill neg">Overdue</span>`;
+    if (sb.status === "With reviewer") return `<span class="pill info">With reviewer</span>`;
+    if (sb.status === "Revise and resubmit") return `<span class="pill warn">Revise and resubmit</span>`;
+    return `<span class="pill pos">${esc(sb.status)}</span>`;
+  };
+  return `
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Spec section</th><th>Submittal</th><th>Rev</th><th>Reviewer</th><th>Status</th><th>Due or returned</th></tr></thead>
+        <tbody>${list.map(sb => {
+          const openItem = sb.status === "Overdue" || sb.status === "With reviewer";
+          const l = dueLabel(sb.dueOffset);
+          return `
+          <tr>
+            <td class="num strong">${esc(sb.spec)}</td>
+            <td>${esc(sb.title)}</td>
+            <td class="num">${sb.rev}</td>
+            <td>${esc(sb.reviewer)}</td>
+            <td>${pill(sb)}</td>
+            <td class="num">${openItem
+              ? `Due ${fmtDate(addDays(sb.dueOffset))}<div class="small ${l.cls === "neg" ? "" : "muted"}" style="${l.cls === "neg" ? "color:var(--neg)" : ""}">${esc(l.text)}</div>`
+              : `<span class="muted">Returned ${fmtDate(addDays(sb.dueOffset))}</span>`}</td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table>
+    </div>`;
+}
+
+function ceStatusPill(c){
+  if (c.queueId){
+    const q = state.data ? state.data.queue.find(x => x.id === c.queueId) : null;
+    if (q && q.status === "written")    return `<span class="pill pos">In Procore, ${esc(q.procoreRef)}</span>`;
+    if (q && q.status === "processing") return `<span class="pill info">Writing to Procore</span>`;
+    if (q && q.status === "rejected")   return `<span class="pill neg">Draft rejected</span>`;
+    if (q && q.status === "returned")   return `<span class="pill info">Claude is revising</span>`;
+    return `<span class="pill warn">Draft in approval queue</span>`;
+  }
+  return `<span class="pill">${esc(c.status)}</span>`;
+}
+
+function changeTable(list){
+  if (!list.length) return `<div class="empty"><strong>No open change events</strong>This project has no open change exposure.</div>`;
+  return `
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Change event</th><th>Description</th><th>Reason</th><th>Est. exposure</th><th>Status</th></tr></thead>
+        <tbody>${list.map(c => {
+          const attrs = c.queueId ? ` class="clickable" tabindex="0" data-action="open-item" data-id="${esc(c.queueId)}"` : "";
+          return `
+          <tr${attrs}>
+            <td class="num strong">${esc(c.ce || "Draft")}</td>
+            <td>${esc(c.title)}</td>
+            <td class="muted">${esc(c.reason)}</td>
+            <td class="num">${fmtMoney(c.amount, true)}</td>
+            <td>${ceStatusPill(c)}</td>
+          </tr>`;
+        }).join("")}
+          <tr class="total-row"><td colspan="3">Open change exposure</td><td class="num">${fmtMoney(sum(list, "amount"), true)}</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function commitmentTable(list){
+  if (!list.length) return `<div class="empty"><strong>No commitments</strong>Subcontracts and purchase orders appear here once they’re issued.</div>`;
+  return `
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Commitment</th><th>Vendor</th><th>Trade</th><th>Contract value</th><th>Billed to date</th><th>Retainage held (10%)</th></tr></thead>
+        <tbody>${list.map(c => `
+          <tr>
+            <td class="num strong">${esc(c.no)}</td>
+            <td>${esc(c.vendor)}</td>
+            <td>${esc(c.trade)}</td>
+            <td class="num">${fmtMoney(c.value)}</td>
+            <td><div class="bar-row"><div class="bar" aria-hidden="true"><span style="width:${c.billed}%"></span></div><span class="num">${c.billed}%</span></div></td>
+            <td class="num">${fmtMoney(c.retainage)}</td>
+          </tr>`).join("")}
+          <tr class="total-row"><td colspan="3">Total, largest commitments</td><td class="num">${fmtMoney(sum(list, "value"))}</td><td></td><td class="num">${fmtMoney(sum(list, "retainage"))}</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function dailyLogHtml(log){
+  const on = sum(log.crews, "onSite"), plan = sum(log.crews, "plan");
+  const rows = log.crews.map(c => {
+    const v = c.onSite - c.plan;
+    const cls = v < 0 ? "warn" : v > 0 ? "pos" : "";
+    const txt = v === 0 ? "On plan" : v > 0 ? `+${v}` : `−${-v}`;
+    return `<tr><td class="strong">${esc(c.trade)}</td><td class="num">${c.onSite}</td><td class="num">${c.plan}</td><td><span class="pill ${cls}">${esc(txt)}</span></td></tr>`;
+  }).join("");
+  return `
+    <div class="log-grid">
+      <dl class="kv">
+        <dt>Logged</dt><dd>${esc(log.logged)}</dd>
+        <dt>Weather</dt><dd>${esc(log.weather)}</dd>
+        <dt>Manpower</dt><dd>${on} of ${plan} planned</dd>
+      </dl>
+      <div>
+        <h4 class="block-title">Superintendent Notes</h4>
+        <ul class="log-notes">${log.notes.map(n => `<li>${keepCodesTogether(n)}</li>`).join("")}</ul>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Trade</th><th>On site</th><th>Planned</th><th>Variance</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+/* ------------------------------------------------------------
+   DroneDeploy gallery — same queries as the EG dashboard:
+   find the newest ProgressPhotoPlan with the project’s photo
+   group name, then load its photos. Cached for the session.
+   ------------------------------------------------------------ */
+const galleryCache = {};
+
+async function ddGraphQL(query, variables){
+  if (typeof fetch !== "function") throw new Error("fetch unavailable");
+  const ctrl = typeof AbortController === "function" ? new AbortController() : null;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), CONFIG.droneTimeoutMs) : null;
+  try{
+    const res = await fetch(CONFIG.droneWorkerUrl, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ query, variables: variables || {} }),
+      signal: ctrl ? ctrl.signal : undefined
+    });
+    const text = await res.text();
+    let json;
+    try{ json = JSON.parse(text); } catch(_){ throw new Error("Non-JSON response from the Worker"); }
+    if (!res.ok || !json || !json.data){
+      const msg = json && json.errors && json.errors[0] && json.errors[0].message;
+      throw new Error(msg || `Worker returned ${res.status}`);
+    }
+    return json.data;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function ddLatestPlanId(projectId, groupName){
+  const q = `
+    query GetProjectPlans($projectId: ID!) {
+      project(id: $projectId) {
+        id
+        plans(first: 100) { edges { node { id name __typename dateCreation } } }
+      }
+    }`;
+  const data = await ddGraphQL(q, { projectId });
+  const edges = (data && data.project && data.project.plans && data.project.plans.edges) || [];
+  const plans = edges.map(e => e && e.node)
+    .filter(n => n && n.__typename === "ProgressPhotoPlan" && String(n.name).trim() === String(groupName).trim())
+    .sort((a,b) => (Date.parse(b.dateCreation) || 0) - (Date.parse(a.dateCreation) || 0));
+  return plans.length ? plans[0].id : null;
+}
+
+async function ddPlanPhotos(planId, first){
+  const q = `
+    query GetProgressPhotos($planId: ID!, $first: Int!) {
+      node(id: $planId) {
+        __typename
+        ... on ProgressPhotoPlan { id name photos(first: $first) { edges { node { url dateCreation } } } }
+      }
+    }`;
+  const data = await ddGraphQL(q, { planId, first });
+  const edges = (data && data.node && data.node.photos && data.node.photos.edges) || [];
+  const photos = edges.map(e => e && e.node).filter(n => n && n.url)
+    .sort((a,b) => (Date.parse(b.dateCreation) || 0) - (Date.parse(a.dateCreation) || 0));
+  return { urls: photos.map(x => x.url), latest: photos.length ? photos[0].dateCreation : null };
+}
+
+async function loadGallery(key){
+  if (galleryCache[key]) return;
+  const name = projectName(key);
+  const g = galleryCache[key] = { status:"loading", photos:[], idx:0, date:"", note:"", source:"drone", alt:`${name} site capture` };
+  const dd = DRONE_PROJECTS[key];
+
+  const fallback = note => {
+    const renders = FALLBACK_RENDERINGS[key] || [];
+    g.status = "fallback";
+    if (renders.length){
+      g.photos = renders;
+      g.source = "renderings";
+      g.alt = `${name} rendering`;
+      g.note = `${note} Showing renderings.`;
+    } else {
+      g.note = note;
+    }
+  };
+
+  try{
+    if (!dd){
+      g.status = "none";
+      g.note = "Drone photography isn’t set up for this project.";
+    } else if (CONFIG.droneMode === "off"){
+      fallback("Live DroneDeploy captures load here in production.");
+    } else {
+      const planId = await ddLatestPlanId(dd.projectId, dd.group);
+      if (!planId){
+        fallback(`No “${dd.group}” photo group found in DroneDeploy.`);
+      } else {
+        const out = await ddPlanPhotos(planId, 30);
+        if (out.urls.length){
+          g.status = "ready";
+          g.photos = out.urls;
+          g.date = out.latest ? fmtDate(new Date(out.latest)) : "";
+        } else {
+          fallback("The latest DroneDeploy photo group has no captures yet.");
+        }
+      }
+    }
+  } catch(err){
+    fallback("DroneDeploy couldn’t be reached from this preview.");
+  }
+  renderGalleryFor(key);
+}
+
+function galleryInner(key){
+  const g = galleryCache[key];
+  const label = t => `<span class="gallery-label">${esc(t)}</span>`;
+  if (!g || g.status === "loading"){
+    return label("DroneDeploy") +
+      `<div class="gallery-overlay" role="status"><span class="gallery-spinner" aria-hidden="true"></span><span>Loading the latest site captures…</span></div>`;
+  }
+  if (g.photos.length){
+    const n = g.photos.length;
+    const i = Math.min(g.idx, n - 1);
+    return `<img class="gallery-img" src="${esc(g.photos[i])}" alt="${esc(g.alt)}, image ${i + 1} of ${n}" onerror="this.style.visibility='hidden'">` +
+      label(g.source === "renderings" ? "Rendering" : "DroneDeploy") +
+      (g.date ? `<span class="gallery-badge">As of ${esc(g.date)}</span>` : "") +
+      (n > 1 ? `
+        <button type="button" class="gallery-nav prev" data-action="gallery-prev" aria-label="Previous image">&#10094;</button>
+        <button type="button" class="gallery-nav next" data-action="gallery-next" aria-label="Next image">&#10095;</button>
+        <span class="gallery-count">${i + 1} / ${n}</span>` : "") +
+      (g.note ? `<span class="gallery-status">${esc(g.note)}</span>` : "");
+  }
+  return `<div class="gallery-bg" style="background-image:url('${esc(GALLERY_PLACEHOLDER)}')" aria-hidden="true"></div>` +
+    label("DroneDeploy") +
+    `<div class="gallery-overlay"><span>${esc(g.note || "Drone photography isn’t available.")}</span></div>`;
+}
+
+function renderGalleryFor(key){
+  const el = $("#projGallery");
+  if (!el || state.view !== "project" || state.projectKey !== key) return;
+  el.innerHTML = galleryInner(key);
 }
 
 /* ============================================================
@@ -2256,7 +3047,7 @@ function viewConnections(){
     { name:"Sage", use:"Job cost, commitments, invoices, retainage", status:["warn","Needs decision"], detail:"Confirm the system of record before the connector is built: Sage Intacct (2026 Manual) or Sage 300 (job descriptions)." },
     { name:"SmartPM", use:"Schedule analytics", status:["pos","Connected, read only"], detail:"Forecasted completion dates and schedule quality." },
     { name:"Bridgit", use:"Resource schedule", status:["warn","Cleanup required"], detail:"Remove 0.01% placeholders and over-100% bookings before using it for capacity planning." },
-    { name:"DroneDeploy", use:"Progress imagery", status:["pos","Connected, read only"], detail:"Site captures referenced in pay app reviews and weekly reports." },
+    { name:"DroneDeploy", use:"Progress imagery", status:["pos","Connected, read only"], detail:"Site captures shown on each project page and referenced in pay app reviews and weekly reports." },
     { name:"Claude", use:"Drafting, analysis and in-portal questions", status:["pos","Connected"], detail: corp
         ? "Answers your questions from portfolio data your account can see."
         : "Uses the TGC connector. Answers questions here and returns finished drafts to your approval queue." }
@@ -2451,7 +3242,7 @@ function renderDrawerFoot(item){
 function refreshAfterChange(id){
   if (!state.data) return;
   renderNav();
-  if (["approvals","today","activity"].includes(state.view)) renderMain();
+  if (["approvals","today","activity","project"].includes(state.view)) renderMain();
   if (state.openId === id) renderDrawer();
 }
 
@@ -2605,16 +3396,42 @@ document.addEventListener("click", async e => {
     case "nav":        go(el.dataset.view); break;
     case "goto": {
       const link = el.dataset.link || "";
-      if (link.startsWith("view:")) go(link.slice(5));
+      if (link === "view:projects" && el.dataset.project) openProject(el.dataset.project);
+      else if (link.startsWith("view:")) go(link.slice(5));
       else openDrawer(link, el);
       break;
     }
+    case "open-project": openProject(el.dataset.key); break;
+    case "external":     break;   /* plain link inside a clickable card: let the browser open it */
     case "open-item":  openDrawer(el.dataset.id, el); break;
     case "close-drawer": closeDrawer(); break;
     case "filter":
       state.filters[el.dataset.key] = el.dataset.value;
       renderMain();
       break;
+    case "proj-tab": {
+      state.projectTab = el.dataset.tab;
+      const p = state.data && state.data.projects.find(x => x.key === state.projectKey);
+      const host = $("#procorePanel");
+      if (p && host){
+        host.innerHTML = procorePanelHtml(p);
+        const t = $(`#ptab-${state.projectTab}`);
+        if (t) t.focus();
+      }
+      break;
+    }
+    case "gallery-prev":
+    case "gallery-next": {
+      const g = galleryCache[state.projectKey];
+      if (g && g.photos.length > 1){
+        const n = g.photos.length;
+        g.idx = (g.idx + (a === "gallery-next" ? 1 : -1) + n) % n;
+        renderGalleryFor(state.projectKey);
+        const again = $(`#projGallery [data-action="${a}"]`);
+        if (again) again.focus();
+      }
+      break;
+    }
     case "approve":     await approveItem(state.openId); break;
     case "show-return": state.noteMode = "return"; renderDrawerFoot(findItem(state.openId)); break;
     case "show-reject": state.noteMode = "reject"; renderDrawerFoot(findItem(state.openId)); break;
