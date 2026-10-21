@@ -10,106 +10,6 @@
 <link rel="icon" type="image/png" sizes="32x32" href="https://static.wixstatic.com/media/4f7dd4_fa97d3a434c14b45a582dd8e3459bdfe~mv2.png">
 <link rel="apple-touch-icon" sizes="180x180" href="https://static.wixstatic.com/media/4f7dd4_fa97d3a434c14b45a582dd8e3459bdfe~mv2.png">
 
-<!--
-  ============================================================
-  TGC PROJECT PORTAL — SHELL v0.6
-  ============================================================
-  HOW TO PREVIEW
-    Paste this entire file into the w3schools Tryit editor
-    (https://www.w3schools.com/html/tryit.asp?filename=tryhtml_default)
-    and click Run. Everything is inline; nothing to install.
-
-  WHAT CHANGED IN v0.6
-    • New Correspondence page in the sidebar, under Deadlines. It lists the
-      letters, notices and transmittals logged in Procore Correspondence
-      across every project the user can see, with who it is with, ball in
-      court, due date and status. Filter by project, or by what needs a TGC
-      response, what is waiting on others, drafts and closed items.
-    • Project users can start correspondence here. “New Draft” starts an
-      outgoing letter and “Draft reply” answers an incoming one. Claude
-      drafts it into the approval queue, and nothing reaches Procore or the
-      recipient until the user approves it. Corporate stays view only.
-    • Project page: Procore Details gains Correspondence and Directory tabs.
-      Directory lists the TGC team, owner, design team, agencies and
-      subcontractors, and flags contacts added from executed subcontracts
-      that still need verifying (SOP 8.6.02). Commitments was already a tab
-      and is unchanged.
-    • Ask Claude can answer questions about correspondence.
-
-  WHAT CHANGED IN v0.5
-    • My Projects: “View in Executive Dashboard” now shows for corporate
-      users only. “Open in Procore” stays for everyone.
-    • New project page, for project and corporate users alike. Open it by
-      clicking a project card, a project listed under My Projects in the
-      sidebar, a project chip in the header, or a project row on Today.
-      It shows a project snapshot, that project’s approvals, Procore details
-      (RFIs, submittals, change events, commitments, daily log), the
-      project’s deadlines, and a DroneDeploy gallery like the EG dashboard.
-    • DroneDeploy gallery reads from the EG dashboard Worker’s existing
-      /drone endpoint (read only), using the same project IDs and photo
-      groups. If the preview can’t reach it, a labeled fallback shows.
-
-  WHAT CHANGED IN v0.4.3
-    • Title case on page titles, panel/section titles, sidebar labels,
-      starter prompt titles and review drawer section titles.
-    • Top Actions (and the corporate Flagged panel) reworked: baseline-aligned
-      numerals, project label on the right, hairline rows, codes kept on one line.
-
-  WHAT CHANGED IN v0.4.2
-    • Favicon added (same image as the EG Executive Dashboard).
-
-  WHAT CHANGED IN v0.4.1
-    • After sign-in and on every page change, the page opens at the very top
-      (greeting and date visible) instead of under the sticky header.
-
-  WHAT CHANGED IN v0.4
-    • Boot spinner and flying-icon hand-off to the login, matching the
-      EG Executive Dashboard sign-in.
-
-  WHAT CHANGED IN v0.3
-    • Visual formatting returned to v0.1 (titles, panels, tables, buttons,
-      badges, drawer, hero).
-    • Kept from v0.2: corporate (view-only) access, the in-portal Ask Claude
-      chat, the Garrett header (navy + header texture, larger logo, tightened
-      user block with a divider before Sign out), and the body texture.
-
-  WHAT IS REAL vs. SAMPLE
-    • UI, navigation, review drawer, approval flow, chat UI: real shell behavior.
-    • All data (users, projects, drafts, deadlines, correspondence, directory,
-      Procore details): SAMPLE ONLY.
-    • DroneDeploy gallery: LIVE when the EG dashboard Worker is reachable,
-      otherwise a labeled fallback.
-    • Sign-in, Procore write-back and Claude drafting of new correspondence:
-      SIMULATED. Nothing is sent anywhere.
-
-  ASK CLAUDE: HOW ANSWERS ARE PRODUCED
-    • "auto" (this shell): tries Claude where the preview environment
-      allows it. Where it doesn’t (for example w3schools, which has no API
-      key), it switches to a clearly labeled demo responder that answers
-      from the sample data with simple rules.
-    • "worker" (production): the browser posts the question to your Worker
-      at /ask. The Worker identifies the user, builds the data context from
-      ONLY that user’s projects, and calls Claude with the API key stored as
-      a Cloudflare secret. The key never reaches the browser.
-
-  w3schools-SAFE BY DESIGN
-    • Single file: CSS + JS inline, no build step, no ES module imports.
-    • No localStorage/sessionStorage (state lives in memory; reload resets).
-    • No URL-hash routing (unreliable inside the Tryit iframe).
-    • Clipboard copy falls back to execCommand inside iframes.
-    • External resources: Google Fonts (Poppins) and your existing
-      Wix-hosted logos and textures, each with a plain-color fallback.
-    • The project page makes read-only requests to the EG dashboard
-      Worker for DroneDeploy photos. Set CONFIG.droneMode = "off" to skip them.
-
-  SECURITY NOTE FOR PRODUCTION
-    • The Worker decides who sees what and who can approve. The client-side
-      checks here (scoping, corporate view-only, the corporate-only Executive
-      Dashboard link) mirror that behavior for the preview only. Never rely
-      on them for security.
-  ============================================================
--->
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -358,7 +258,9 @@ button.scope-chip.active{background:var(--gold);border-color:var(--gold);color:#
 .nav-badge{
   margin-left:auto;background:var(--gold);color:#1e1e1e;
   font-size:.72rem;font-weight:700;border-radius:999px;
-  padding:.05rem .5rem;min-width:22px;text-align:center;
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:20px;height:20px;padding:0 .4rem;line-height:1;
+  font-variant-numeric:tabular-nums;
 }
 /* Projects listed under My Projects / All Projects (a guide line runs under the icon) */
 .nav-sub-list{
@@ -1009,12 +911,12 @@ const USERS = [
 ];
 
 const PROJECTS = {
-  fillmore:      { name:"Fillmore",       location:"Colorado Springs, CO", phase:"Vertical construction",   pct:58, cac:41850000, cacDelta:62400,  sched:4,  openRfis:7,  agedRfis:2, overdueSubmittals:1, exposure:186500, finalCo:410, manpower:[86,94],   lastLog:"6:12 PM yesterday", flag:"Framing crew 8 short of plan at Building 4" },
-  parkerii:      { name:"Parker II",      location:"Parker, CO",           phase:"Interiors",               pct:72, cac:52300000, cacDelta:-18200, sched:0,  openRfis:4,  agedRfis:1, overdueSubmittals:0, exposure:94200,  finalCo:220, manpower:[112,108], lastLog:"5:48 PM yesterday", flag:"Drywall inspection passed at Building 2" },
-  knoxville:     { name:"Knoxville",      location:"Knoxville, TN",        phase:"Framing and MEP rough-in",pct:41, cac:47900000, cacDelta:138000, sched:9,  openRfis:11, agedRfis:4, overdueSubmittals:3, exposure:412000, finalCo:520, manpower:[64,80],   lastLog:"6:31 PM yesterday", flag:"Pay App #6 bills ahead of logged progress at Building 3" },
-  forumii:       { name:"Forum II",       location:"Fort Myers, FL",       phase:"Exterior envelope",       pct:88, cac:38600000, cacDelta:9800,   sched:3,  openRfis:2,  agedRfis:0, overdueSubmittals:1, exposure:48700,  finalCo:95,  manpower:[52,55],   lastLog:"5:57 PM yesterday", flag:"Three weather days logged; notice window closes in 2 days" },
-  uptowncommons: { name:"Uptown Commons", location:"Chandler, AZ",         phase:"Closeout",                pct:95, cac:44100000, cacDelta:0,      sched:-2, openRfis:1,  agedRfis:0, overdueSubmittals:0, exposure:22300,  finalCo:40,  manpower:[38,40],   lastLog:"6:05 PM yesterday", flag:"Building 5 punch walk set for {d+2}" },
-  emblemmesa:    { name:"Emblem Mesa",    location:"Mesa, AZ",             phase:"Interiors and site",      pct:83, cac:45256395, cacDelta:3060,   sched:0,  openRfis:3,  agedRfis:1, overdueSubmittals:0, exposure:61500,  finalCo:130, manpower:[70,72],   lastLog:"6:20 PM yesterday", flag:"Debris cleanup back charge evidence assembled" }
+  fillmore:      { name:"Fillmore",       location:"Colorado Springs, Colorado", phase:"Vertical construction",   pct:58, cac:41850000, cacDelta:62400,  sched:4,  openRfis:7,  agedRfis:2, overdueSubmittals:1, exposure:186500, finalCo:410, manpower:[86,94],   lastLog:"6:12 PM yesterday", flag:"Framing crew 8 short of plan at Building 4" },
+  parkerii:      { name:"Parker II",      location:"Parker, Colorado",           phase:"Interiors",               pct:72, cac:52300000, cacDelta:-18200, sched:0,  openRfis:4,  agedRfis:1, overdueSubmittals:0, exposure:94200,  finalCo:220, manpower:[112,108], lastLog:"5:48 PM yesterday", flag:"Drywall inspection passed at Building 2" },
+  knoxville:     { name:"Knoxville",      location:"Knoxville, Tennessee",        phase:"Framing and MEP rough-in",pct:41, cac:47900000, cacDelta:138000, sched:9,  openRfis:11, agedRfis:4, overdueSubmittals:3, exposure:412000, finalCo:520, manpower:[64,80],   lastLog:"6:31 PM yesterday", flag:"Pay App #6 bills ahead of logged progress at Building 3" },
+  forumii:       { name:"Forum II",       location:"Fort Myers, Florida",       phase:"Exterior envelope",       pct:88, cac:38600000, cacDelta:9800,   sched:3,  openRfis:2,  agedRfis:0, overdueSubmittals:1, exposure:48700,  finalCo:95,  manpower:[52,55],   lastLog:"5:57 PM yesterday", flag:"Three weather days logged; notice window closes in 2 days" },
+  uptowncommons: { name:"Uptown Commons", location:"Chandler, Arizona",         phase:"Closeout",                pct:95, cac:44100000, cacDelta:0,      sched:-2, openRfis:1,  agedRfis:0, overdueSubmittals:0, exposure:22300,  finalCo:40,  manpower:[38,40],   lastLog:"6:05 PM yesterday", flag:"Building 5 punch walk set for {d+2}" },
+  emblemmesa:    { name:"Emblem Mesa",    location:"Mesa, Arizona",             phase:"Interiors and site",      pct:83, cac:45256395, cacDelta:3060,   sched:0,  openRfis:3,  agedRfis:1, overdueSubmittals:0, exposure:61500,  finalCo:130, manpower:[70,72],   lastLog:"6:20 PM yesterday", flag:"Debris cleanup back charge evidence assembled" }
 };
 
 /* Level B drafts (plus one Level A write-back item) prepared by Claude */
@@ -1910,7 +1812,7 @@ function viewToday(){
   const left = corp ? `
     <section class="panel" aria-labelledby="flagsTitle">
       <div class="panel-head">
-        <h3 id="flagsTitle">Flagged in Last Night’s Digest</h3>
+        <h3 id="flagsTitle">Flagged in Yesterday’s Digest</h3>
         <span class="badge">As of 5:30 AM</span>
       </div>
       <ul class="todo-list">
@@ -1992,7 +1894,7 @@ function viewToday(){
       </div>
     </div>
 
-    <h3 class="section-title">Project Pulse from Last Night’s Daily Logs</h3>
+    <h3 class="section-title">Project Pulse from Yesterday’s Daily Logs</h3>
     <div class="table-wrap">
       <table class="data">
         <thead><tr><th>Project</th><th>Complete</th><th>Manpower today</th><th>Schedule</th><th>Last daily log</th><th>From the digest</th></tr></thead>
@@ -2081,8 +1983,18 @@ function viewApprovals(){
    VIEW: PROJECTS
    ============================================================ */
 /* Shared project buttons. "View in Executive Dashboard" is for corporate users only. */
+const PROCORE_URLS = {
+  fillmore:      "https://app.procore.com/webclients/host/companies/29091/projects/2825399/tools/hubs/project-hub/views/overview",
+  parkerii:      "https://app.procore.com/webclients/host/companies/29091/projects/2856408/tools/hubs/project-hub/views/overview",
+  knoxville:     "https://app.procore.com/webclients/host/companies/29091/projects/2856701/tools/hubs/project-hub/views/overview",
+  forumii:       "https://app.procore.com/webclients/host/companies/29091/projects/2770879/tools/hubs/project-hub/views/overview",
+  uptowncommons: "https://app.procore.com/webclients/host/companies/29091/projects/2856013/tools/hubs/project-hub/views/overview",
+  emblemmesa:    "https://app.procore.com/webclients/host/companies/29091/projects/2814646/tools/hubs/project-hub/views/overview"
+};
 function procoreButton(p){
-  return `<button type="button" class="btn btn-secondary btn-sm" data-action="toast" data-msg="In production, this opens ${esc(p.name)} directly in Procore${isCorp() ? " with read-only access" : ""}.">Open in Procore</button>`;
+  const url = PROCORE_URLS[p.key];
+  if (!url) return "";
+  return `<a class="btn btn-secondary btn-sm" href="${esc(url)}" target="_blank" rel="noopener" data-action="external">Open in Procore</a>`;
 }
 function dashboardLink(){
   if (!isCorp()) return "";
@@ -2106,7 +2018,7 @@ function viewProjects(){
           <h3><button type="button" class="card-title-btn" data-action="open-project" data-key="${esc(p.key)}">${esc(p.name)}</button></h3>
           <span class="pill ${s.cls}">${esc(s.text)}</span>
         </div>
-        <p class="project-loc">${esc(p.location)}, ${esc(p.phase.toLowerCase())}</p>
+        <p class="project-loc">${esc(p.location)}</p>
         <div class="bar-row"><div class="bar" style="flex:1" aria-hidden="true"><span style="width:${p.pct}%"></span></div><span class="num small strong">${p.pct}% complete</span></div>
         <div class="metrics">
           <div class="metric"><div class="metric-k">Cost at Complete</div><div class="metric-v">${fmtCompact(p.cac)}</div></div>
@@ -2184,7 +2096,7 @@ function viewProject(){
     <div class="page-head detail-head">
       <div>
         <h2>${esc(p.name)}</h2>
-        <p>${esc(p.location)}, ${esc(p.phase.toLowerCase())}</p>
+        <p>${esc(p.location)}</p>
       </div>
       <div class="detail-actions">
         ${procoreButton(p)}
@@ -2208,7 +2120,7 @@ function viewProject(){
           <div class="metric"><div class="metric-k">Final CO</div><div class="metric-v">${fmtDate(addDays(p.finalCo))}</div></div>
         </div>
         <dl class="kv">
-          <dt>Manpower Last Night</dt><dd><span class="pill${short ? " warn" : ""}">${p.manpower[0]} of ${p.manpower[1]} planned</span></dd>
+          <dt>Manpower Yesterday</dt><dd><span class="pill${short ? " warn" : ""}">${p.manpower[0]} of ${p.manpower[1]} planned</span></dd>
           <dt>Last Daily Log</dt><dd>${esc(p.lastLog)}</dd>
           <dt>From the Digest</dt><dd>${keepCodesTogether(fillDates(p.flag))}</dd>
           <dt>Project Team</dt><dd>${esc(team)}</dd>
@@ -2361,7 +2273,7 @@ function projectDetails(p){
   commitments.forEach(c => { c.retainage = Math.round(c.value * c.billed / 100 * 0.10); });
   commitments.sort((a,b) => b.value - a.value);
 
-  /* Daily log — crew totals match last night’s manpower; the lead trade carries the shortfall */
+  /* Daily log — crew totals match yesterday’s manpower; the lead trade carries the shortfall */
   const lead = /framing|vertical/i.test(p.phase) ? "Framing"
     : /interior/i.test(p.phase) ? "Drywall"
     : /envelope/i.test(p.phase) ? "Roofing"
@@ -3561,9 +3473,9 @@ function demoProject(p){
     `• Cost at Complete: ${fmtMoney(p.cac)}, ${cacDeltaText(p)} vs. last month`,
     `• Open change exposure: ${fmtMoney(p.exposure)}`,
     `• RFIs: ${p.openRfis} open, ${p.agedRfis} open more than 7 days. Overdue submittals: ${p.overdueSubmittals}`,
-    `• Manpower last night: ${p.manpower[0]} of ${p.manpower[1]} planned`,
+    `• Manpower yesterday: ${p.manpower[0]} of ${p.manpower[1]} planned`,
     `• Final CO: ${fmtDate(addDays(p.finalCo))}`,
-    `• From last night’s digest: ${fillDates(p.flag)}`
+    `• From yesterday’s digest: ${fillDates(p.flag)}`
   ];
   if (drafts.length) lines.push(`• ${plural(drafts.length,"draft")} ${isCorp() ? "with the project team" : "waiting on you"}: ${drafts.map(q => fillDates(q.title)).join("; ")}`);
   if (next) lines.push(`• Next deadline: ${next.title}, ${fmtDate(addDays(next.offset))} (${dueLabel(next.offset).text.toLowerCase()})`);
@@ -3633,7 +3545,7 @@ function demoCost(){
   const mover = ps.slice().sort((a,b) => Math.abs(b.cacDelta) - Math.abs(a.cacDelta))[0];
   return ["Cost at Complete by project:"]
     .concat(ps.map(p => `• **${p.name}**: ${fmtMoney(p.cac)}, ${cacDeltaText(p)} vs. last month`))
-    .concat([`\nThe biggest move is **${mover.name}** (${cacDeltaText(mover)}). Last night’s digest notes: ${fillDates(mover.flag)}.`])
+    .concat([`\nThe biggest move is **${mover.name}** (${cacDeltaText(mover)}). Yesterday's digest notes: ${fillDates(mover.flag)}.`])
     .join("\n");
 }
 function demoRfis(){
