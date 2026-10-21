@@ -1645,8 +1645,8 @@ async function signIn(userId, btn){
     render();
     scrollToTopAndFocusMain();
     toast(isCorp()
-      ? `Signed in as ${user.name}. Corporate view of all ${data.projects.length} projects.`
-      : `Signed in as ${user.name}. Showing ${plural(user.projects.length,"project")}.`);
+      ? `Signed in as ${user.name}. Executive View of Portfolio.`
+      : `Signed in as ${user.name}. Showing ${plural(user.projects.length,"Project")}.`);
   } catch(err){
     toast(`Sign-in failed: ${err.message}`);
   } finally {
