@@ -626,7 +626,7 @@ table.data tr.dir-group td{
 }
 .stat-v{font-size:1.5rem;font-weight:700;color:var(--heading);line-height:1.2}
 .stat-k{font-size:.78rem;color:var(--muted)}
-.conn-list{display:flex;flex-direction:column;gap:.75rem;max-width:900px}
+.conn-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
 .conn{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1rem;align-items:center}
 .conn-name{font-weight:600;color:var(--heading)}
 .conn-use{font-size:.8rem;color:var(--muted)}
@@ -767,7 +767,7 @@ textarea.draft:disabled{background:var(--surface-2);color:var(--muted)}
   .fields{grid-template-columns:1fr}
   .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
   .page-head h2{font-size:1.45rem}
-  .conn{grid-template-columns:1fr}
+  .conn-list{grid-template-columns:1fr}
   .conn-right{align-items:flex-start;flex-direction:row}
   .msg{max-width:94%}
   .log-grid{grid-template-columns:1fr}
@@ -901,6 +901,7 @@ const CONFIG = {
   droneMode: "auto",                                 // "auto" reads DroneDeploy through the Worker below; "off" shows the fallback
   droneWorkerUrl: "https://eg-executive-dashboard.bshives.workers.dev/drone",  // same read-only endpoint the EG dashboard uses
   droneTimeoutMs: 12000,
+  procoreConnected: true,                            // set to false to preview the disconnected state
   draftDelayMs: 3200                                 // how long simulated Claude drafting of new correspondence takes
 };
 
@@ -3621,16 +3622,18 @@ function viewActivity(){
 function viewConnections(){
   const u = state.user, corp = isCorp();
   const list = [
-    { name:"Microsoft Entra ID", use:"Sign-in", status:["pos","Connected"], detail:`Signed in as ${u.email}. Access is removed automatically when an account is disabled.` },
+    { name:"Microsoft Entra ID", use:"Sign-In", status:["pos","Connected"], detail:`Signed in as ${u.email}. Access is removed automatically when an account is disabled.` },
     { name:"Microsoft 365", use:"SharePoint, Outlook, Teams", status:["pos","Connected"], detail:"Project folders, email threads and meeting transcripts." },
     corp
-      ? { name:"Procore", use:"RFIs, submittals, correspondence, change events, commitments, directory, daily logs, Pay", status:["pos","Connected, read only"], detail:"Corporate access can view every project but can’t approve or write to Procore." }
-      : { name:"Procore", use:"RFIs, submittals, correspondence, change events, commitments, directory, daily logs, Pay", status:["pos","Connected"], detail:`Authorized as ${u.name}. Every action runs under your Procore permissions and appears in Procore’s history under your name.`, action:"Reconnect" },
-    { name:"Sage", use:"Job cost, commitments, invoices, retainage", status:["warn","Needs decision"], detail:"Confirm the system of record before the connector is built: Sage Intacct (2026 Manual) or Sage 300 (job descriptions)." },
-    { name:"SmartPM", use:"Schedule analytics", status:["pos","Connected, read only"], detail:"Forecasted completion dates and schedule quality." },
-    { name:"Bridgit", use:"Resource schedule", status:["warn","Cleanup required"], detail:"Remove 0.01% placeholders and over-100% bookings before using it for capacity planning." },
-    { name:"DroneDeploy", use:"Progress imagery", status:["pos","Connected, read only"], detail:"Site captures shown on each project page and referenced in pay app reviews and weekly reports." },
-    { name:"Claude", use:"Drafting, analysis and in-portal questions", status:["pos","Connected"], detail: corp
+      ? { name:"Procore", use:"RFIs, Submittals, Correspondence, Change Events, Commitments, Directory, Daily Logs, Pay", status:["pos","Connected, read only"], detail:"Corporate access can view every project but can’t approve or write to Procore." }
+            : CONFIG.procoreConnected
+        ? { name:"Procore", use:"RFIs, Submittals, Correspondence, Change Events, Commitments, Directory, Daily Logs, Pay", status:["pos","Connected"], detail:`Authorized as ${u.name}. Every action runs under your Procore permissions and appears in Procore’s history under your name.` }
+        : { name:"Procore", use:"RFIs, Submittals, Correspondence, Change Events, Commitments, Directory, Daily Logs, Pay", status:["neg","Disconnected"], detail:"Your Procore authorization has expired. Approved drafts can’t write back to Procore until you reconnect.", action:"Reconnect" },
+    { name:"Sage", use:"Job Cost, Commitments, Invoices, Retainage", status:["warn","Needs decision"], detail:"Confirm the system of record before the connector is built: Sage Intacct (2026 Manual) or Sage 300 (job descriptions)." },
+    { name:"SmartPM", use:"Schedule Analytics", status:["pos","Connected, read only"], detail:"Forecasted completion dates and schedule quality." },
+    { name:"Bridgit", use:"Resource Schedule", status:["warn","Cleanup required"], detail:"Remove 0.01% placeholders and over-100% bookings before using it for capacity planning." },
+    { name:"DroneDeploy", use:"Progress Imagery", status:["pos","Connected, read only"], detail:"Site captures shown on each project page and referenced in pay app reviews and weekly reports." },
+    { name:"Claude", use:"Drafting, Analysis and In-Portal Questions", status:["pos","Connected"], detail: corp
         ? "Answers your questions from portfolio data your account can see."
         : "Uses the TGC connector. Answers questions here and returns finished drafts to your approval queue." }
   ];
