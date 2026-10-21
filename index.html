@@ -12,12 +12,29 @@
 
 <!--
   ============================================================
-  TGC PROJECT PORTAL — SHELL v0.5
+  TGC PROJECT PORTAL — SHELL v0.6
   ============================================================
   HOW TO PREVIEW
     Paste this entire file into the w3schools Tryit editor
     (https://www.w3schools.com/html/tryit.asp?filename=tryhtml_default)
     and click Run. Everything is inline; nothing to install.
+
+  WHAT CHANGED IN v0.6
+    • New Correspondence page in the sidebar, under Deadlines. It lists the
+      letters, notices and transmittals logged in Procore Correspondence
+      across every project the user can see, with who it is with, ball in
+      court, due date and status. Filter by project, or by what needs a TGC
+      response, what is waiting on others, drafts and closed items.
+    • Project users can start correspondence here. “New Draft” starts an
+      outgoing letter and “Draft reply” answers an incoming one. Claude
+      drafts it into the approval queue, and nothing reaches Procore or the
+      recipient until the user approves it. Corporate stays view only.
+    • Project page: Procore Details gains Correspondence and Directory tabs.
+      Directory lists the TGC team, owner, design team, agencies and
+      subcontractors, and flags contacts added from executed subcontracts
+      that still need verifying (SOP 8.6.02). Commitments was already a tab
+      and is unchanged.
+    • Ask Claude can answer questions about correspondence.
 
   WHAT CHANGED IN v0.5
     • My Projects: “View in Executive Dashboard” now shows for corporate
@@ -58,10 +75,12 @@
 
   WHAT IS REAL vs. SAMPLE
     • UI, navigation, review drawer, approval flow, chat UI: real shell behavior.
-    • All data (users, projects, drafts, deadlines, Procore details): SAMPLE ONLY.
+    • All data (users, projects, drafts, deadlines, correspondence, directory,
+      Procore details): SAMPLE ONLY.
     • DroneDeploy gallery: LIVE when the EG dashboard Worker is reachable,
       otherwise a labeled fallback.
-    • Sign-in and Procore write-back: SIMULATED. Nothing is sent anywhere.
+    • Sign-in, Procore write-back and Claude drafting of new correspondence:
+      SIMULATED. Nothing is sent anywhere.
 
   ASK CLAUDE: HOW ANSWERS ARE PRODUCED
     • "auto" (this shell): tries Claude where the preview environment
@@ -613,6 +632,34 @@ table.data tr.total-row td{background:var(--surface-3);font-weight:700;color:var
 }
 
 /* ============================================================
+   CORRESPONDENCE + DIRECTORY
+   ============================================================ */
+.corr-form{margin-bottom:1.5rem}
+.form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.85rem 1rem;margin-bottom:.9rem}
+.form-field{display:flex;flex-direction:column;gap:.3rem;min-width:0}
+.form-field.wide{grid-column:1 / -1}
+.form-field label{font-size:.8rem;font-weight:600;color:var(--heading)}
+.form-field .select{width:100%;min-width:0}
+.input{
+  width:100%;border:1px solid var(--border-strong);border-radius:10px;
+  padding:.5rem .8rem;background:var(--surface);font-size:.86rem;
+}
+.form-field textarea{
+  width:100%;min-height:96px;resize:vertical;border:1px solid var(--border-strong);
+  border-radius:10px;padding:.65rem .8rem;background:var(--surface);font-size:.86rem;line-height:1.5;
+}
+.form-field select:disabled{opacity:.6;cursor:not-allowed}
+.form-foot{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem}
+.form-foot .spacer{flex:1}
+.form-hint{font-size:.76rem;color:var(--muted);margin:0;max-width:64ch}
+.reply-ref{font-size:.84rem;background:var(--surface-2);border-radius:10px;padding:.6rem .8rem;margin:0 0 .9rem}
+.tab-bar{display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center;justify-content:space-between;margin-bottom:.85rem}
+table.data tr.dir-group td{
+  background:var(--surface-2);font-size:.74rem;font-weight:700;color:var(--heading);
+  padding:.45rem .85rem;
+}
+
+/* ============================================================
    ASK CLAUDE — CHAT + STARTER PROMPTS
    ============================================================ */
 .chat{display:flex;flex-direction:column;gap:.9rem}
@@ -814,6 +861,7 @@ textarea.draft:disabled{background:var(--surface-2);color:var(--muted)}
   .msg{max-width:94%}
   .log-grid{grid-template-columns:1fr}
   .gallery{min-height:260px}
+  .form-grid{grid-template-columns:1fr}
 }
 @media (max-width:520px){
   .brand-name{display:none}
@@ -942,7 +990,8 @@ const CONFIG = {
   claudeUrl: "https://claude.ai/new",
   droneMode: "auto",                                 // "auto" reads DroneDeploy through the Worker below; "off" shows the fallback
   droneWorkerUrl: "https://eg-executive-dashboard.bshives.workers.dev/drone",  // same read-only endpoint the EG dashboard uses
-  droneTimeoutMs: 12000
+  droneTimeoutMs: 12000,
+  draftDelayMs: 3200                                 // how long simulated Claude drafting of new correspondence takes
 };
 
 /* ============================================================
@@ -1268,6 +1317,44 @@ const DEADLINES = [
   { project:"emblemmesa",    type:"Bond",      offset:21, title:"Performance bond release milestone",               source:"Bond tracker" }
 ];
 
+/* Procore Correspondence: letters, notices and transmittals.
+   dir: "out" = TGC sent it, "in" = TGC received it.
+   party: the other side, by company (subcontractors) or role (owner, design team, agencies);
+          the project Directory resolves roles to a company and contact.
+   bic: ball in court ("TGC" means the project team owes the response).
+   queueId: the letter is still a draft in the approval queue. */
+const CORRESPONDENCE = [
+  { id:"c1",  project:"fillmore",      no:"#014", dir:"in",  type:"Consultant letter",       party:"Geotechnical engineer",   subject:"Field direction for over-excavation at the Building 4 pad",    dateOffset:-7,  dueOffset:null, bic:null,                     status:"Closed", note:"Change order drafted from this direction." },
+  { id:"c2",  project:"fillmore",      no:"#015", dir:"out", type:"Transmittal",             party:"Front Range Earthworks",  subject:"Revised Building 4 pad details and geotechnical direction",    dateOffset:-6,  dueOffset:null, bic:null,                     status:"Closed" },
+  { id:"c3",  project:"fillmore",      no:"#017", dir:"in",  type:"Owner letter",            party:"Owner’s representative",  subject:"Pricing request for upgraded clubhouse finishes",              dateOffset:-3,  dueOffset:4,    bic:"TGC",                    status:"Open" },
+  { id:"c4",  project:"parkerii",      no:"#022", dir:"in",  type:"Owner letter",            party:"Owner’s representative",  subject:"Direction to proceed with the unit cabinet hardware upgrade",  dateOffset:-9,  dueOffset:null, bic:null,                     status:"Closed", note:"Issued as CO-009." },
+  { id:"c5",  project:"parkerii",      no:"#024", dir:"out", type:"Transmittal",             party:"Architect of record",     subject:"Window package submittal 08 51 13 for review",                 dateOffset:-4,  dueOffset:3,    bic:"Architect of record",    status:"Open" },
+  { id:"c6",  project:"parkerii",      no:"#025", dir:"in",  type:"Agency correspondence",   party:"Building department",     subject:"Building 2 drywall inspection approval",                       dateOffset:-1,  dueOffset:null, bic:null,                     status:"Closed" },
+  { id:"c7",  project:"knoxville",     no:"#031", dir:"in",  type:"Agency correspondence",   party:"Fire marshal",            subject:"Comment letter on rated corridor penetrations",                dateOffset:-4,  dueOffset:6,    bic:"TGC",                    status:"Open" },
+  { id:"c8",  project:"knoxville",     no:"#032", dir:"out", type:"Notice to subcontractor", party:"Peak Mechanical",         subject:"Cure notice for HVAC manpower and schedule recovery",          dateOffset:-2,  dueOffset:5,    bic:"Peak Mechanical",        status:"Open" },
+  { id:"c9",  project:"knoxville",     no:"#033", dir:"out", type:"Notice to subcontractor", party:"Summit Interior Systems", subject:"Conditional lien waiver required for Pay App #5",             dateOffset:-3,  dueOffset:2,    bic:"Summit Interior Systems",status:"Open" },
+  { id:"c10", project:"forumii",       no:null,   dir:"out", type:"Delay notice",            party:"Owner’s representative",  subject:"Weather delay notice for 3 lost days",                         dateOffset:0,   dueOffset:2,    bic:"Owner’s representative", status:"Open", queueId:"q4" },
+  { id:"c11", project:"forumii",       no:"#018", dir:"out", type:"Notice to subcontractor", party:"Gulf Coast Roofing",      subject:"Renewal certificate required for the umbrella policy",         dateOffset:-3,  dueOffset:6,    bic:"Gulf Coast Roofing",     status:"Open" },
+  { id:"c12", project:"forumii",       no:"#016", dir:"in",  type:"Consultant letter",       party:"Structural engineer",     subject:"Site visit report on roof truss bracing at Buildings 3 and 4", dateOffset:-8,  dueOffset:null, bic:null,                     status:"Closed", note:"Action items logged under SOP 8.5.08." },
+  { id:"c13", project:"uptowncommons", no:"#041", dir:"in",  type:"Agency correspondence",   party:"Building department",     subject:"Comments on the monument sign permit",                         dateOffset:-12, dueOffset:3,    bic:"TGC",                    status:"Open" },
+  { id:"c14", project:"uptowncommons", no:"#043", dir:"out", type:"Transmittal",             party:"Owner’s representative",  subject:"Closeout document log, revision 3",                            dateOffset:-5,  dueOffset:null, bic:null,                     status:"Closed" },
+  { id:"c15", project:"emblemmesa",    no:"#027", dir:"out", type:"Notice to subcontractor", party:"Desert Line Framing",     subject:"Cure notice for debris cleanup at Buildings 6 and 7",          dateOffset:-20, dueOffset:-17,  bic:null,                     status:"Closed", note:"No response. Back charge drafted." },
+  { id:"c16", project:"emblemmesa",    no:null,   dir:"out", type:"Back charge notice",      party:"Desert Line Framing",     subject:"Debris cleanup at Buildings 6 and 7",                          dateOffset:0,   dueOffset:null, bic:"Desert Line Framing",    status:"Open", queueId:"q6" },
+  { id:"c17", project:"emblemmesa",    no:"#030", dir:"in",  type:"Owner letter",            party:"Owner’s representative",  subject:"Closeout items needed for the performance bond release",       dateOffset:-6,  dueOffset:10,   bic:"TGC",                    status:"Open" }
+];
+
+/* Types offered when a project user starts a new letter (with the SOP each follows, if any) */
+const CORR_TYPES = [
+  ["Notice to subcontractor", "8.3.16"],
+  ["Delay notice",            "8.3.14"],
+  ["Weather delay request",   "8.3.13"],
+  ["Back charge notice",      "8.3.15"],
+  ["Agency response",         "8.3.12"],
+  ["Owner letter",            null],
+  ["Transmittal",             null],
+  ["General letter",          null]
+];
+
 /* Ranked cross-project actions from the overnight digest (project users only). link: queue id or "view:<name>" */
 const ACTIONS = [
   { project:"forumii",       text:"Send the weather delay notice. The contract window closes in 2 days.",            link:"q4" },
@@ -1376,6 +1463,27 @@ const LOG_NOTES = [
   "City inspector on site for scheduled inspections.", "Toolbox talk held on ladder safety."
 ];
 
+/* Sample Procore project Directory pools. Generated per project with its own seed,
+   so adding the Directory does not change any other sample record. */
+const DIR_FIRST = ["Alicia","Ben","Carmen","Derek","Elena","Frank","Gina","Hector","Ivy","Jared","Kendra","Luis","Maya","Nolan","Olivia","Paul","Quinn","Rosa","Sam","Tara","Victor","Wendy","Adrian","Brooke"];
+const DIR_LAST  = ["Alvarez","Brooks","Castillo","Dunn","Ellis","Foster","Grant","Hughes","Iverson","Jensen","Kemp","Lowe","Marsh","Nguyen","Ortiz","Price","Reyes","Shaw","Tran","Vaughn","Whitaker","Young","Moreno","Sutton"];
+const DIR_FIRMS = {
+  owner:      ["Copper Ridge Holdings", "Blue Mesa Partners", "Harbor Point Capital", "Summit Peak Residential"],
+  architect:  ["Lumen Architecture", "Northline Design Studio", "Parkway Architects"],
+  mep:        ["Vector MEP Engineers", "Crossfield Engineering"],
+  structural: ["Keel Structural", "Ridgeway Structural Group"],
+  civil:      ["Basin Civil Consulting", "Terrace Civil Engineers"],
+  geotech:    ["Bedrock Geotechnical", "Strata Geo Consultants"]
+};
+const DIR_AREA = { fillmore:"719", parkerii:"303", knoxville:"865", forumii:"239", uptowncommons:"480", emblemmesa:"480" };
+const DIR_GROUPS = [
+  ["TGC",           "TGC Project Team"],
+  ["Owner",         "Owner"],
+  ["Design",        "Design Team and Consultants"],
+  ["Agency",        "Agencies"],
+  ["Subcontractor", "Subcontractors"]
+];
+
 /* DroneDeploy projects: same project IDs and photo groups as the EG Executive Dashboard */
 const DRONE_PROJECTS = {
   fillmore:      { projectId:"Project:6734c6e392d961845d31a8de", group:"Photos Plan" },
@@ -1461,6 +1569,7 @@ const ICONS = {
   review:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
   projects:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1M10 21v-3h4v3"/></svg>',
   deadlines:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>',
+  correspondence:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
   ask:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
   activity:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>',
   connections:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>'
@@ -1489,6 +1598,7 @@ const API = {
       projects: scope.map(k => Object.assign({ key:k, team:teamFor(k) }, clone(PROJECTS[k]))),
       queue: clone(QUEUE.filter(mine)).map(q => Object.assign(q, { status:"pending", revision:1, bodyCurrent:null })),
       deadlines: clone(DEADLINES.filter(mine)),
+      correspondence: clone(CORRESPONDENCE.filter(mine)),
       actions: user.access === "corporate" ? [] : clone(ACTIONS.filter(mine)),   // corporate has no action items
       activity: clone(ACTIVITY.filter(mine)),
       automations: AUTOMATIONS.map(a => ({
@@ -1505,7 +1615,7 @@ const API = {
     const refs = {
       "Change order":`CCO-0${n}`, "RFI":`RFI #${100+n}`, "Pay app review":"Pay App #6, adjusted",
       "Delay notice":`Correspondence #${200+n}`, "Meeting minutes":`Meeting #${n}`,
-      "Back charge":`BC-0${n}`, "Change event":`CE #${n}`
+      "Back charge":`BC-0${n}`, "Change event":`CE #${n}`, "Correspondence":`Correspondence #${200+n}`
     };
     return { ref: refs[item.type] || `Procore #${n}` };
   },
@@ -1519,6 +1629,15 @@ const API = {
   async reject(item, reason){
     if (CONFIG.apiMode === "live") return liveFetch(`/queue/${item.id}/reject`, { method:"POST", body:{ reason } });
     await wait(250);
+    return { ok:true };
+  },
+
+  /* A project user asks Claude to draft a letter. In production the Worker hands the
+     request to Claude, which drafts from Procore, SharePoint and Outlook sources and
+     posts the result to the approval queue. Here the draft is built from a template. */
+  async requestCorrespondenceDraft(request){
+    if (CONFIG.apiMode === "live") return liveFetch("/correspondence/draft", { method:"POST", body:request });
+    await wait(CONFIG.draftDelayMs);
     return { ok:true };
   }
 };
@@ -1540,13 +1659,16 @@ async function liveFetch(path, opts){
    STATE
    ============================================================ */
 function freshChat(){ return { messages:[], busy:false, mode:null, draft:"" }; }
+function freshFilters(){ return { qProject:"all", qType:"all", dType:"all", cProject:"all", cShow:"all" }; }
 const state = {
   user:null, data:null, view:"today",
   openId:null, lastFocus:null, noteMode:null,
   verify:{},
-  filters:{ qProject:"all", qType:"all", dType:"all" },
+  filters: freshFilters(),
   askProject:null,
   projectKey:null, projectTab:"rfis",   // project page: which project, which Procore tab
+  corrForm:null,                        // the New Draft / Draft reply form on the Correspondence page
+  corrSeq:0,
   chat: freshChat()
 };
 function isCorp(){ return !!(state.user && state.user.access === "corporate"); }
@@ -1560,14 +1682,15 @@ function logActivity(entry){ state.data.activity.unshift(Object.assign({ when:`T
 
 function navItems(){
   return [
-    { id:"today",       label:"Today",                                  icon:"today" },
-    { id:"approvals",   label: isCorp() ? "In Review" : "Approvals",    icon: isCorp() ? "review" : "approvals", badge: !isCorp() },
-    { id:"projects",    label: isCorp() ? "All Projects" : "My Projects", icon:"projects" },
-    { id:"deadlines",   label:"Deadlines",                              icon:"deadlines" },
+    { id:"today",          label:"Today",                                  icon:"today" },
+    { id:"approvals",      label: isCorp() ? "In Review" : "Approvals",    icon: isCorp() ? "review" : "approvals", badge: !isCorp() },
+    { id:"projects",       label: isCorp() ? "All Projects" : "My Projects", icon:"projects" },
+    { id:"deadlines",      label:"Deadlines",                              icon:"deadlines" },
+    { id:"correspondence", label:"Correspondence",                         icon:"correspondence" },
     { sep:true },
-    { id:"ask",         label:"Ask Claude",                             icon:"ask" },
-    { id:"activity",    label:"Activity",                               icon:"activity" },
-    { id:"connections", label:"Connections",                            icon:"connections" }
+    { id:"ask",            label:"Ask Claude",                             icon:"ask" },
+    { id:"activity",       label:"Activity",                               icon:"activity" },
+    { id:"connections",    label:"Connections",                            icon:"connections" }
   ];
 }
 
@@ -1600,9 +1723,10 @@ async function signIn(userId, btn){
     const data = await API.getPortalData(user);
     Object.assign(state, {
       user, data, view:"today", openId:null, noteMode:null, verify:{},
-      filters:{ qProject:"all", qType:"all", dType:"all" },
+      filters: freshFilters(),
       askProject: data.projects[0].key,
       projectKey:null, projectTab:"rfis",
+      corrForm:null,
       chat: freshChat()
     });
     $("#loginView").hidden = true;
@@ -1622,7 +1746,7 @@ async function signIn(userId, btn){
 
 function signOut(){
   closeDrawer(true);
-  Object.assign(state, { user:null, data:null, view:"today", openId:null, noteMode:null, verify:{}, projectKey:null, projectTab:"rfis", chat:freshChat() });
+  Object.assign(state, { user:null, data:null, view:"today", openId:null, noteMode:null, verify:{}, projectKey:null, projectTab:"rfis", corrForm:null, chat:freshChat() });
   $("#shellView").hidden = true;
   $("#loginView").hidden = false;
   window.scrollTo(0,0);
@@ -1689,12 +1813,13 @@ function projectSubNav(){
    ============================================================ */
 const VIEWS = {
   today: viewToday, approvals: viewApprovals, projects: viewProjects, project: viewProject,
-  deadlines: viewDeadlines, ask: viewAsk, activity: viewActivity, connections: viewConnections
+  deadlines: viewDeadlines, correspondence: viewCorrespondence,
+  ask: viewAsk, activity: viewActivity, connections: viewConnections
 };
 function render(){ renderNav(); renderScopeChips(); renderMain(); }
 function renderMain(){
   const fn = VIEWS[state.view] || viewToday;
-  $("#main").innerHTML = fn() + `<p class="foot">Project Portal shell v0.5. Sample data for preview only.</p>`;
+  $("#main").innerHTML = fn() + `<p class="foot">Project Portal shell v0.6. Sample data for preview only.</p>`;
   if (state.view === "ask") afterAskRender();
   if (state.view === "project") afterProjectRender();
 }
@@ -1894,7 +2019,7 @@ function queueTable(items, opts){
     const flags = flagCount(q);
     return `
       <tr class="clickable" tabindex="0" data-action="open-item" data-id="${esc(q.id)}">
-        <td><div class="strong">${esc(fillDates(q.title))}</div><div class="muted small">SOP ${esc(q.sop)}${q.revision > 1 ? `, revision ${q.revision}` : ""}</div></td>
+        <td><div class="strong">${esc(fillDates(q.title))}</div><div class="muted small">${q.sop ? `SOP ${esc(q.sop)}` : "No SOP"}${q.revision > 1 ? `, revision ${q.revision}` : ""}</div></td>
         ${showProject ? `<td><span class="proj-tag">${esc(projectName(q.project))}</span></td>` : ""}
         <td><span class="tag">${esc(q.type)}</span></td>
         <td class="num">${q.amount != null ? fmtMoney(q.amount, true) : '<span class="muted">—</span>'}</td>
@@ -2258,14 +2383,74 @@ function projectDetails(p){
   return (detailCache[p.key] = { rfis, submittals, changes, commitments, dailyLog });
 }
 
+/* ------------------------------------------------------------
+   Sample Procore project Directory. Uses its own seed so it never
+   shifts the RFIs, submittals or commitments generated above.
+   Subcontractors come from the project’s commitments; the smallest
+   one is shown as just added from an executed subcontract and not
+   yet verified (SOP 8.6.02: Claude adds, the person verifies).
+   ------------------------------------------------------------ */
+const dirCache = {};
+function projectDirectory(p){
+  if (dirCache[p.key]) return dirCache[p.key];
+  const rnd = seededRandom(p.key + ":directory");
+  const int = (min, max) => min + Math.floor(rnd() * (max - min + 1));
+  const any = arr => arr[Math.floor(rnd() * arr.length)];
+  const firsts = shuffled(DIR_FIRST, rnd), lasts = shuffled(DIR_LAST, rnd);
+  let n = 0;
+  const person = () => { const f = firsts[n % firsts.length], l = lasts[n % lasts.length]; n++; return { name:`${f} ${l}`, email:`${f}.${l}@example.com`.toLowerCase() }; };
+  const area = DIR_AREA[p.key] || "555";
+  const phone = () => `(${area}) 555-01${String(int(10, 99))}`;
+  const city = p.location.split(",")[0];
+  const entry = (group, company, role, title, extra) => {
+    const who = person();
+    return Object.assign({ group, company, role, contact:who.name, title, email:who.email, phone:phone(), verified:true, note:"" }, extra || {});
+  };
+
+  const list = [];
+  /* TGC project team: assigned portal users plus the superintendent */
+  USERS.filter(u => u.access === "project" && u.projects.includes(p.key)).forEach(u => {
+    list.push({ group:"TGC", company:"The Garrett Companies", role:u.role, contact:u.name, title:"", email:u.email, phone:phone(), verified:true, note:"" });
+  });
+  list.push(entry("TGC", "The Garrett Companies", "Superintendent", ""));
+  /* Owner, design team and consultants */
+  list.push(entry("Owner",  any(DIR_FIRMS.owner),      "Owner’s representative", "Development manager"));
+  list.push(entry("Design", any(DIR_FIRMS.architect),  "Architect of record",    "Project architect"));
+  list.push(entry("Design", any(DIR_FIRMS.mep),        "MEP engineer",           "Engineer of record"));
+  list.push(entry("Design", any(DIR_FIRMS.structural), "Structural engineer",    "Engineer of record"));
+  list.push(entry("Design", any(DIR_FIRMS.civil),      "Civil engineer",         "Project engineer"));
+  list.push(entry("Design", any(DIR_FIRMS.geotech),    "Geotechnical engineer",  "Field engineer"));
+  /* Agencies */
+  list.push(entry("Agency", `${city} Building Department`,     "Building department", "Plans examiner"));
+  list.push(entry("Agency", `${city} Fire Marshal’s Office`,   "Fire marshal",        "Fire inspector"));
+  /* Subcontractors from commitments */
+  const commitments = projectDetails(p).commitments;
+  commitments.forEach((c, i) => {
+    const last = i === commitments.length - 1;
+    list.push(entry("Subcontractor", c.vendor, `${c.trade} subcontractor`, "Project manager",
+      last ? { verified:false, note:`Added from executed subcontract ${c.no}` } : { note:c.no }));
+  });
+  return (dirCache[p.key] = list);
+}
+/* Correspondence names the other party by company (subs) or role (owner, design team, agencies) */
+function dirMatch(projectKey, party){
+  const p = state.data && state.data.projects.find(x => x.key === projectKey);
+  if (!p || !party) return null;
+  return projectDirectory(p).find(e => e.company === party || e.role === party) || null;
+}
+
 const PROCORE_TABS = [
-  ["rfis","RFIs"], ["submittals","Submittals"], ["changes","Change Events"],
-  ["commitments","Commitments"], ["dailylog","Daily Log"]
+  ["rfis","RFIs"], ["submittals","Submittals"], ["correspondence","Correspondence"], ["changes","Change Events"],
+  ["commitments","Commitments"], ["directory","Directory"], ["dailylog","Daily Log"]
 ];
 
 function procorePanelHtml(p){
   const det = projectDetails(p);
-  const counts = { rfis:det.rfis.length, submittals:det.submittals.length, changes:det.changes.length, commitments:det.commitments.length };
+  const counts = {
+    rfis:det.rfis.length, submittals:det.submittals.length, changes:det.changes.length, commitments:det.commitments.length,
+    correspondence: state.data.correspondence.filter(c => c.project === p.key).length,
+    directory: projectDirectory(p).length
+  };
   const tab = PROCORE_TABS.some(t => t[0] === state.projectTab) ? state.projectTab : "rfis";
   const tabs = `<div class="filters" role="tablist" aria-label="Procore details">` + PROCORE_TABS.map(t => {
     const on = t[0] === tab;
@@ -2276,8 +2461,10 @@ function procorePanelHtml(p){
   let body = "";
   if (tab === "rfis") body = rfiTable(det.rfis);
   else if (tab === "submittals") body = submittalTable(det.submittals);
+  else if (tab === "correspondence") body = projectCorrespondenceHtml(p);
   else if (tab === "changes") body = changeTable(det.changes);
   else if (tab === "commitments") body = commitmentTable(det.commitments);
+  else if (tab === "directory") body = directoryHtml(p);
   else body = dailyLogHtml(det.dailyLog);
 
   return tabs + `<div id="ptabPanel" role="tabpanel" aria-labelledby="ptab-${tab}">${body}</div>`;
@@ -2418,6 +2605,50 @@ function dailyLogHtml(log){
         <tbody>${rows}</tbody>
       </table>
     </div>`;
+}
+
+function directoryHtml(p){
+  const dir = projectDirectory(p);
+  const unverified = dir.filter(e => !e.verified).length;
+  const note = unverified
+    ? `${plural(unverified,"contact")} added from executed subcontracts ${unverified === 1 ? "needs" : "need"} verifying by the project team (SOP 8.6.02).`
+    : "Every contact on this project is verified.";
+  const rows = DIR_GROUPS.map(g => {
+    const members = dir.filter(e => e.group === g[0]);
+    if (!members.length) return "";
+    return `<tr class="dir-group"><td colspan="6">${esc(g[1])} (${members.length})</td></tr>` + members.map(e => `
+      <tr>
+        <td class="strong">${esc(e.company)}</td>
+        <td>${esc(e.contact)}${e.title ? `<div class="muted small">${esc(e.title)}</div>` : ""}</td>
+        <td>${esc(e.role)}</td>
+        <td class="num">${esc(e.phone)}</td>
+        <td class="small">${esc(e.email)}</td>
+        <td>${e.verified ? `<span class="pill pos">Verified</span>` : `<span class="pill warn">Not verified</span>`}${e.note ? `<div class="muted small">${esc(e.note)}</div>` : ""}</td>
+      </tr>`).join("");
+  }).join("");
+  return `
+    <div class="tab-bar"><span class="panel-note">${esc(note)}</span></div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Company</th><th>Contact</th><th>Role</th><th>Phone</th><th>Email</th><th>Status</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function projectCorrespondenceHtml(p){
+  const list = sortCorr(state.data.correspondence.filter(c => c.project === p.key));
+  const bar = `
+    <div class="tab-bar">
+      <span class="panel-note">Letters, notices and transmittals logged in Procore Correspondence</span>
+      <span class="detail-actions">
+        ${isCorp() ? "" : `<button type="button" class="btn btn-primary btn-sm" data-action="corr-new" data-project="${esc(p.key)}">New Draft</button>`}
+        <button type="button" class="btn btn-secondary btn-sm" data-action="corr-all" data-project="${esc(p.key)}">All correspondence</button>
+      </span>
+    </div>`;
+  return bar + (list.length
+    ? corrTable(list, { hideProject:true })
+    : `<div class="empty"><strong>No correspondence yet</strong>Letters and notices for ${esc(p.name)} will appear here once they’re logged in Procore.</div>`);
 }
 
 /* ------------------------------------------------------------
@@ -2602,6 +2833,411 @@ function viewDeadlines(){
 }
 
 /* ============================================================
+   VIEW: CORRESPONDENCE
+   One list across every project the user can see, plus the same
+   table on each project page. Incoming letters show who owes the
+   response; outgoing letters start as drafts in the approval queue.
+   Project users can start a letter or a reply; Claude drafts it,
+   the user approves it, and Procore keeps the record.
+   ============================================================ */
+const CORR_SHOWS = [
+  ["all","All"], ["tgc","Needs TGC response"], ["others","Waiting on others"], ["drafts","Drafts"], ["closed","Closed"]
+];
+
+function corrQueue(c){ return c.queueId ? findItem(c.queueId) : null; }
+/* Latest reply drafted from the portal (new entries are added to the front) */
+function corrReplyOf(c){ return state.data.correspondence.find(x => x.replyOf === c.id) || null; }
+
+/* drafting → draft → open → closed (or rejected) */
+function corrPhase(c){
+  if (c.drafting) return "drafting";
+  const q = corrQueue(c);
+  if (q){
+    if (q.status === "written")  return "open";
+    if (q.status === "rejected") return "rejected";
+    return "draft";
+  }
+  const r = corrReplyOf(c);
+  const rq = r ? corrQueue(r) : null;
+  if (rq && rq.status === "written") return "closed";
+  return c.status === "Closed" ? "closed" : "open";
+}
+function corrNeedsTgc(c){ return corrPhase(c) === "open" && c.bic === "TGC"; }
+function corrMatches(c, show){
+  const ph = corrPhase(c);
+  if (show === "tgc")    return corrNeedsTgc(c);
+  if (show === "others") return ph === "open" && !!c.bic && c.bic !== "TGC";
+  if (show === "drafts") return ph === "drafting" || ph === "draft";
+  if (show === "closed") return ph === "closed" || ph === "rejected";
+  return true;
+}
+function corrBic(c){
+  const ph = corrPhase(c);
+  if (ph === "drafting" || ph === "draft") return "TGC (draft)";
+  if (ph === "closed" || ph === "rejected") return "";
+  return c.bic || "";
+}
+function corrNo(c){
+  if (c.no) return c.no;
+  const q = corrQueue(c);
+  if (q && q.status === "written"){
+    const m = String(q.procoreRef).match(/#\d+/);
+    return m ? m[0] : "Logged";
+  }
+  return "Draft";
+}
+/* [pill class, text] */
+function corrStatus(c){
+  const ph = corrPhase(c);
+  if (ph === "drafting") return ["info", "Claude is drafting"];
+  const q = corrQueue(c);
+  if (q){
+    if (q.status === "written")    return ["pos",  `In Procore, ${q.procoreRef}`];
+    if (q.status === "processing") return ["info", "Writing to Procore"];
+    if (q.status === "rejected")   return ["neg",  "Draft rejected"];
+    if (q.status === "returned")   return ["info", "Claude is revising"];
+    return ["warn", isCorp() ? "Draft with project team" : "Draft in approval queue"];
+  }
+  const r = corrReplyOf(c);
+  if (r){
+    if (r.drafting) return ["info", "Claude is drafting a reply"];
+    const rq = corrQueue(r);
+    if (rq && rq.status === "written")    return ["pos",  `Answered, ${rq.procoreRef}`];
+    if (rq && rq.status === "processing") return ["info", "Writing reply to Procore"];
+    if (rq && rq.status === "returned")   return ["info", "Claude is revising the reply"];
+    if (rq && rq.status === "pending")    return ["warn", isCorp() ? "Reply with project team" : "Reply in approval queue"];
+  }
+  if (ph === "closed") return ["", "Closed"];
+  return c.bic === "TGC" ? ["neg", "Response needed"] : ["info", "Awaiting response"];
+}
+function corrRank(c){
+  const ph = corrPhase(c);
+  if (ph === "drafting" || ph === "draft") return 0;
+  if (ph === "open") return c.bic === "TGC" ? 1 : 2;
+  return 3;
+}
+/* Drafts first, then what TGC owes (soonest due), then what others owe, then closed (newest first) */
+function sortCorr(list){
+  return list.map((c, i) => ({ c, i })).sort((a, b) => {
+    const ra = corrRank(a.c), rb = corrRank(b.c);
+    if (ra !== rb) return ra - rb;
+    if (ra === 1 || ra === 2){
+      const da = a.c.dueOffset == null ? 999 : a.c.dueOffset;
+      const db = b.c.dueOffset == null ? 999 : b.c.dueOffset;
+      if (da !== db) return da - db;
+    }
+    if (ra === 3 && a.c.dateOffset !== b.c.dateOffset) return b.c.dateOffset - a.c.dateOffset;
+    return a.i - b.i;
+  }).map(x => x.c);
+}
+
+function corrTable(list, opts){
+  const showProject = !(opts && opts.hideProject);
+  const corp = isCorp();
+  const row = c => {
+    const ph = corrPhase(c);
+    const q = corrQueue(c);
+    const reply = corrReplyOf(c);
+    const replyQ = reply ? corrQueue(reply) : null;
+    const entry = dirMatch(c.project, c.party);
+    const sub = entry ? (entry.company !== c.party ? entry.company : entry.contact) : "";
+    const st = corrStatus(c);
+    const bic = corrBic(c);
+    const unsent = ph === "drafting" || ph === "draft" || ph === "rejected";
+    const when = unsent
+      ? "not yet sent"
+      : `${c.dir === "in" ? "received" : "sent"} ${fmtDate(addDays(c.dateOffset))}`;
+    const showDue = c.dueOffset != null && ph !== "closed" && ph !== "rejected";
+    const l = showDue ? dueLabel(c.dueOffset) : null;
+
+    let action = `<span class="muted">—</span>`;
+    if (replyQ && replyQ.status !== "rejected"){
+      action = `<button type="button" class="btn btn-secondary btn-sm" data-action="open-item" data-id="${esc(replyQ.id)}">View reply</button>`;
+    } else if (reply && reply.drafting){
+      action = `<span class="muted small">Drafting…</span>`;
+    } else if (!corp && c.dir === "in" && corrNeedsTgc(c)){
+      action = `<button type="button" class="btn btn-secondary btn-sm" data-action="corr-reply" data-id="${esc(c.id)}">Draft reply</button>`;
+    } else if (q){
+      action = `<button type="button" class="btn btn-secondary btn-sm" data-action="open-item" data-id="${esc(q.id)}">${!corp && q.status === "pending" ? "Review draft" : "View draft"}</button>`;
+    }
+
+    const attrs = q ? ` class="clickable" tabindex="0" data-action="open-item" data-id="${esc(q.id)}"` : "";
+    return `
+      <tr${attrs}>
+        <td>
+          <div class="strong">${keepCodesTogether(c.subject)}</div>
+          <div class="muted small">${esc(corrNo(c))}, ${esc(when)}</div>
+          ${c.note ? `<div class="muted small">${esc(c.note)}</div>` : ""}
+        </td>
+        <td><span class="tag">${esc(c.type)}</span></td>
+        ${showProject ? `<td><span class="proj-tag">${esc(projectName(c.project))}</span></td>` : ""}
+        <td>${c.dir === "in" ? "From" : "To"} ${esc(c.party)}${sub ? `<div class="muted small">${esc(sub)}</div>` : ""}</td>
+        <td>${bic ? esc(bic) : '<span class="muted">—</span>'}</td>
+        <td class="num">${showDue ? `${fmtDate(addDays(c.dueOffset))}<div><span class="pill ${l.cls}">${esc(l.text)}</span></div>` : '<span class="muted">—</span>'}</td>
+        <td><span class="pill ${st[0]}">${esc(st[1])}</span></td>
+        <td>${action}</td>
+      </tr>`;
+  };
+  return `
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Correspondence</th><th>Type</th>${showProject ? "<th>Project</th>" : ""}<th>With</th><th>Ball in court</th><th>Due</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>${list.map(row).join("")}</tbody>
+      </table>
+    </div>`;
+}
+
+function viewCorrespondence(){
+  const d = state.data, f = state.filters, corp = isCorp();
+  const base = d.correspondence.filter(c => f.cProject === "all" || c.project === f.cProject);
+  const list = sortCorr(base.filter(c => corrMatches(c, f.cShow)));
+
+  const projectChips = d.projects.length > 1 ? `
+    <div class="filters">
+      <span class="filters-label">Project</span>
+      <button type="button" class="chip${f.cProject === "all" ? " active" : ""}" data-action="filter" data-key="cProject" data-value="all">All</button>
+      ${d.projects.map(p => `<button type="button" class="chip${f.cProject === p.key ? " active" : ""}" data-action="filter" data-key="cProject" data-value="${esc(p.key)}">${esc(p.name)}</button>`).join("")}
+    </div>` : "";
+  const showChips = CORR_SHOWS.map(s => {
+    const n = base.filter(c => corrMatches(c, s[0])).length;
+    return `<button type="button" class="chip${f.cShow === s[0] ? " active" : ""}" data-action="filter" data-key="cShow" data-value="${s[0]}">${esc(s[1])} (${n})</button>`;
+  }).join("");
+
+  return `
+    <div class="page-head detail-head">
+      <div>
+        <h2>Correspondence</h2>
+        <p>${corp
+          ? "Letters, notices and transmittals in Procore across the portfolio. View only."
+          : "Letters, notices and transmittals on your projects. Claude drafts, you approve, Procore keeps the record."}</p>
+      </div>
+      ${corp ? "" : `<div class="detail-actions"><button type="button" class="btn btn-primary" data-action="corr-new">New Draft</button></div>`}
+    </div>
+
+    ${!corp && state.corrForm ? corrFormHtml() : ""}
+
+    <div class="wrap">
+      ${projectChips}
+      <div class="filters"><span class="filters-label">Show</span>${showChips}</div>
+      ${list.length ? corrTable(list) : `<div class="empty"><strong>Nothing to show</strong>Choose All to see every letter, notice and transmittal.</div>`}
+    </div>`;
+}
+
+/* ------------------------------------------------------------
+   New Draft / Draft reply (project users only)
+   ------------------------------------------------------------ */
+function corrRecipients(p){ return projectDirectory(p).filter(e => e.group !== "TGC"); }
+function corrPartyFor(e){ return e.group === "Subcontractor" ? e.company : e.role; }
+function replyTypeFor(c){
+  if (c.type === "Agency correspondence" || /department|marshal/i.test(c.party)) return "Agency response";
+  if (/owner/i.test(c.party)) return "Owner letter";
+  return "General letter";
+}
+
+function openCorrForm(opts){
+  if (isCorp() || !state.data) return;
+  const d = state.data, f = state.filters;
+  let project = opts.project || (f.cProject !== "all" ? f.cProject : d.projects[0].key);
+  let type = CORR_TYPES[0][0], subject = "", to = 0, replyTo = null;
+  if (opts.replyTo){
+    const c = d.correspondence.find(x => x.id === opts.replyTo);
+    if (!c) return;
+    replyTo = c.id;
+    project = c.project;
+    type = replyTypeFor(c);
+    subject = `Response to ${c.no}: ${c.subject}`;
+    const p = d.projects.find(x => x.key === project);
+    const i = corrRecipients(p).findIndex(e => e.company === c.party || e.role === c.party);
+    to = i >= 0 ? i : 0;
+  }
+  if (!d.projects.some(p => p.key === project)) project = d.projects[0].key;
+  state.corrForm = { project, type, to, subject, note:"", replyTo };
+  if (state.view !== "correspondence") go("correspondence");
+  else { renderMain(); scrollToTopAndFocusMain(); }
+  setTimeout(() => {
+    const t = $(replyTo ? "#corrNote" : "#corrSubject");
+    if (t){ try { t.focus({ preventScroll:true }); } catch(_) { t.focus(); } }
+  }, 30);
+}
+
+function corrFormHtml(){
+  const fm = state.corrForm, d = state.data;
+  const p = d.projects.find(x => x.key === fm.project) || d.projects[0];
+  const recips = corrRecipients(p);
+  const reply = fm.replyTo ? d.correspondence.find(c => c.id === fm.replyTo) : null;
+  return `
+    <section class="panel corr-form" aria-labelledby="corrFormTitle">
+      <div class="panel-head">
+        <h3 id="corrFormTitle">${reply ? "Draft a Reply" : "New Correspondence Draft"}</h3>
+        <span class="badge">Claude drafts, you approve</span>
+      </div>
+      ${reply ? `<p class="reply-ref">Replying to ${esc(reply.no)} from ${esc(reply.party)}: ${esc(reply.subject)}, received ${fmtDate(addDays(reply.dateOffset))}${reply.dueOffset != null ? `, response due ${fmtDate(addDays(reply.dueOffset))}` : ""}.</p>` : ""}
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="corrProject">Project</label>
+          <select id="corrProject" class="select"${reply ? " disabled" : ""}>
+            ${d.projects.map(x => `<option value="${esc(x.key)}"${x.key === p.key ? " selected" : ""}>${esc(x.name)}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="corrType">Type</label>
+          <select id="corrType" class="select">
+            ${CORR_TYPES.map(t => `<option value="${esc(t[0])}"${t[0] === fm.type ? " selected" : ""}>${esc(t[0])}${t[1] ? ` (SOP ${esc(t[1])})` : ""}</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="corrTo">To, from the project directory</label>
+          <select id="corrTo" class="select">
+            ${recips.map((e, i) => `<option value="${i}"${i === fm.to ? " selected" : ""}>${esc(e.company)}, ${esc(e.contact)} (${esc(e.role)})</option>`).join("")}
+          </select>
+        </div>
+        <div class="form-field wide">
+          <label for="corrSubject">Subject</label>
+          <input id="corrSubject" class="input" type="text" value="${esc(fm.subject)}" placeholder="For example: Cure notice for the missed slab pour at Building 2">
+        </div>
+        <div class="form-field wide">
+          <label for="corrNote">What should the letter say?</label>
+          <textarea id="corrNote" placeholder="The facts, dates and what you need from the recipient. Claude adds the contract references and backup.">${esc(fm.note)}</textarea>
+        </div>
+      </div>
+      <div class="form-foot">
+        <p class="form-hint">Claude drafts this into your approval queue with its sources and checks. Nothing goes to Procore or the recipient until you approve it.</p>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-secondary" data-action="corr-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" data-action="corr-submit">Ask Claude to Draft</button>
+      </div>
+    </section>`;
+}
+
+async function submitCorrDraft(){
+  if (isCorp() || !state.corrForm) return;
+  const fm = state.corrForm, d = state.data, f = state.filters;
+  const subject = fm.subject.trim(), note = fm.note.trim();
+  if (subject.length < 3){ toast("Add a subject so Claude knows what the letter is about."); const s = $("#corrSubject"); if (s) s.focus(); return; }
+  if (note.length < 10){ toast("Add a sentence or two about what the letter should say."); const n = $("#corrNote"); if (n) n.focus(); return; }
+
+  const p = d.projects.find(x => x.key === fm.project) || d.projects[0];
+  const recips = corrRecipients(p);
+  const to = recips[fm.to] || recips[0];
+  const sop = (CORR_TYPES.find(t => t[0] === fm.type) || [null, null])[1];
+
+  state.corrSeq += 1;
+  const entry = {
+    id:`cn${state.corrSeq}`, project:p.key, no:null, dir:"out", type:fm.type,
+    party:corrPartyFor(to), subject, dateOffset:0, dueOffset:null,
+    bic:corrPartyFor(to), status:"Open", drafting:true, queueId:null, replyOf:fm.replyTo || null
+  };
+  d.correspondence.unshift(entry);
+  logActivity({ actor:state.user.name, action:"Requested draft", item:subject, project:p.key, ref:fm.type, edited:false });
+
+  state.corrForm = null;
+  if (!(f.cProject === "all" || f.cProject === p.key)) f.cProject = p.key;
+  if (!corrMatches(entry, f.cShow)) f.cShow = "all";
+  if (state.view === "correspondence" || state.view === "project") renderMain();
+  toast(`Claude is drafting “${subject}”. It will appear in your approval queue.`);
+
+  const session = d;
+  try{
+    await API.requestCorrespondenceDraft({ project:p.key, type:fm.type, sop, to, subject, note, replyTo:entry.replyOf });
+  } catch(err){
+    if (state.data !== session) return;
+    d.correspondence.splice(d.correspondence.indexOf(entry), 1);
+    rerenderKeepFocus();
+    toast(`Claude couldn’t start the draft: ${err.message}. Try again.`);
+    return;
+  }
+  if (state.data !== session) return;   // signed out while Claude was drafting
+
+  const item = buildCorrDraft(entry, { to, note, sop }, p);
+  d.queue.unshift(item);
+  entry.queueId = item.id;
+  entry.drafting = false;
+  logActivity({ actor:"Claude", action:"Prepared", item:subject, project:p.key, ref:"Draft", edited:false });
+  renderNav();
+  rerenderKeepFocus();
+  toast(`Claude finished “${subject}”. It’s waiting in your approval queue.`);
+}
+
+/* Re-render the page after a background update without losing what the user was typing in */
+function rerenderKeepFocus(){
+  if (!["correspondence","project","approvals","today","activity"].includes(state.view)) return;
+  const a = document.activeElement;
+  const id = a && a.id && $("#main").contains(a) ? a.id : null;
+  const pos = id && typeof a.selectionStart === "number" ? [a.selectionStart, a.selectionEnd] : null;
+  renderMain();
+  if (id){
+    const el = document.getElementById(id);
+    if (el){
+      try { el.focus({ preventScroll:true }); } catch(_) { el.focus(); }
+      if (pos && el.setSelectionRange) try { el.setSelectionRange(pos[0], pos[1]); } catch(_){}
+    }
+  }
+}
+
+/* Demo draft: a template filled from the request. In production Claude writes the letter. */
+function buildCorrDraft(entry, req, p){
+  const u = state.user, to = req.to;
+  const reply = entry.replyOf ? state.data.correspondence.find(c => c.id === entry.replyOf) : null;
+  const asks = {
+    "Notice to subcontractor": "Please respond in writing within [cure period under the Subcontract] of receipt, with your plan to correct the condition described above.",
+    "Delay notice":            "We request an extension of the Contract Time of [number] calendar days under the delay provisions of the Prime Contract. Supporting documentation is attached.",
+    "Weather delay request":   "We request an extension of the Contract Time of [number] calendar days for the weather days documented in the attached daily reports.",
+    "Back charge notice":      "TGC will deduct the cost described above from your next payment as permitted under your Subcontract, unless you respond in writing within [response period].",
+    "Agency response":         "Please let us know if anything further is needed to close this item.",
+    "Owner letter":            "Please let us know if you have questions or need anything further.",
+    "Transmittal":             "Please review the enclosed and respond by [date].",
+    "General letter":          "Please let us know if you have any questions."
+  };
+  const body = [
+    `${entry.type.toUpperCase()} (DRAFT${req.sop ? `, SOP ${req.sop}` : ""})`,
+    `Project: ${p.name}`,
+    `To: ${to.contact}, ${to.company} (${to.role})`,
+    `Date: ${fmtDate(TODAY)}`,
+    reply ? `Re: Correspondence ${reply.no}, ${reply.subject}, received ${fmtDate(addDays(reply.dateOffset))}` : null,
+    `Subject: ${entry.subject}`,
+    "",
+    reply ? `Thank you for your letter of ${fmtDate(addDays(reply.dateOffset))}. This letter responds to it.\n` : null,
+    "Summary",
+    req.note,
+    "",
+    "Requested action",
+    asks[entry.type] || asks["General letter"],
+    "",
+    "Supporting documentation",
+    reply ? `• Your letter, Correspondence ${reply.no}` : null,
+    "• [Backup Claude attaches from Procore, SharePoint and Outlook]",
+    "",
+    "Sincerely,",
+    u.name,
+    `${u.role}, The Garrett Companies`
+  ].filter(x => x != null).join("\n");
+
+  const checks = [["ok", `Recipient matches the ${p.name} project directory: ${to.contact}, ${to.company}.`]];
+  if (reply) checks.push(["ok", `Linked to Correspondence ${reply.no} so the reply stays on the same thread in Procore.`]);
+  if (/\[[^\]]+\]/.test(body)) checks.push(["warn", "Bracketed items need your input before approval."]);
+  if (entry.type === "Agency response") checks.push(["warn", "SOP 8.3.12 is Level C. You own this relationship, so treat the draft as a starting point."]);
+  checks.push(["warn", "Demo draft built from your note. In production, Claude adds the contract references and backup."]);
+
+  const sources = [["Portal", `Request from ${u.name}, ${fmtDate(TODAY)}`], ["Procore", `${p.name} project directory`]];
+  if (reply) sources.push(["Procore", `Correspondence ${reply.no} from ${reply.party}`]);
+
+  const fields = [
+    ["To", `${to.contact}, ${to.company}`],
+    ["Recipient role", to.role],
+    ["Correspondence type", entry.type],
+    ["Requested by", u.name]
+  ];
+  if (reply) fields.push(["Replying to", `${reply.no}, received ${fmtDate(addDays(reply.dateOffset))}`]);
+
+  return {
+    id:`q-${entry.id}`, project:p.key, type:"Correspondence", sop:req.sop, level:"B",
+    title:entry.subject, prepared:nowTime(), amount:null,
+    fields, checks, sources, verify:[], body,
+    status:"pending", revision:1, bodyCurrent:null
+  };
+}
+
+/* ============================================================
    VIEW: ASK CLAUDE (in-portal chat + starter prompts)
    ============================================================ */
 function chatSuggestions(){
@@ -2780,6 +3416,13 @@ function portalContext(){
       due:fmtDate(addDays(x.offset)), daysFromToday:x.offset, type:x.type,
       item:x.title, project:projectName(x.project), source:x.source
     })),
+    correspondence: sortCorr(d.correspondence).map(c => ({
+      number:corrNo(c), project:projectName(c.project), direction: c.dir === "in" ? "received" : "sent",
+      type:c.type, with:c.party, subject:c.subject,
+      date: corrPhase(c) === "draft" || corrPhase(c) === "drafting" ? null : fmtDate(addDays(c.dateOffset)),
+      due: c.dueOffset != null ? fmtDate(addDays(c.dueOffset)) : null,
+      ballInCourt: corrBic(c) || null, status: corrStatus(c)[1], note: c.note || null
+    })),
     overnightRuns: d.automations,
     recentActivity: d.activity.slice(0, 15).map(a => ({ when:a.when, who:a.actor, action:a.action, item:fillDates(a.item), project:projectName(a.project) })),
     note: "Sample demonstration data."
@@ -2795,7 +3438,7 @@ function systemPrompt(){
     "If the user asks about a project that isn’t in the data, say it isn’t available to their account.",
     corp
       ? "This user has corporate, view-only access to every project. They cannot approve, return or reject drafts, so never suggest that they do; point them to the project team instead."
-      : "This user approves drafts for their own projects. When relevant, point them to the item in their approval queue.",
+      : "This user approves drafts for their own projects. When relevant, point them to the item in their approval queue, or to the Correspondence page to start a letter or reply.",
     "Be concise and specific: lead with the answer, use real numbers and dates from the data, format dates as M/D/YYYY and money like $1,234.",
     "Formatting: short paragraphs or lines starting with \"• \". Bold project names with **double asterisks**. No headings or tables.",
     `Today is ${fmtDate(TODAY)}. User: ${state.user.name}, ${state.user.role}.`,
@@ -2897,6 +3540,7 @@ function demoAnswer(text){
   if (outside) return `I can’t see **${outside}** from your account. My answers are limited to the projects you have access to: ${d.projects.map(p => p.name).join(", ")}.`;
 
   const named = d.projects.find(p => t.includes(p.name.toLowerCase()));
+  if (has(/correspond|letter|transmittal|cure notice|ball in court/)) return demoCorrespondence(named);
   if (has(/deadline|due|overdue|expir|notice/)) return demoDeadlines(named);
   if (named) return demoProject(named);
   if (has(/behind|schedule|late|slip|ahead/)) return demoSchedule();
@@ -2906,7 +3550,7 @@ function demoAnswer(text){
   if (has(/rfi|submittal/)) return demoRfis();
   if (has(/summar|overview|portfolio|status|how .*(look|doing|going)|update/)) return demoOverview();
   return [
-    "In this preview I can answer questions about schedules, Cost at Complete, change exposure, RFIs and submittals, deadlines, the drafts in review, or any one of your projects by name.",
+    "In this preview I can answer questions about schedules, Cost at Complete, change exposure, RFIs and submittals, deadlines, correspondence, the drafts in review, or any one of your projects by name.",
     "Connected to Claude in production, you can ask about this data in your own words."
   ].join("\n\n");
 }
@@ -2937,6 +3581,24 @@ function demoDeadlines(named){
     ? `${plural(soon.length,"deadline")} ${soon.length === 1 ? "falls" : "fall"} in the next 7 days${named ? ` on **${named.name}**` : ""}:`
     : `Nothing is due in the next 7 days${named ? ` on **${named.name}**` : ""}. The next ones are:`;
   return [head].concat(show.map(x => `• **${fmtDate(addDays(x.offset))}** (${dueLabel(x.offset).text.toLowerCase()}): ${x.title}, ${projectName(x.project)}`)).join("\n");
+}
+function demoCorrespondence(named){
+  const list = state.data.correspondence.filter(c => !named || c.project === named.key);
+  const where = named ? ` on **${named.name}**` : "";
+  const due = c => c.dueOffset != null ? `, due ${fmtDate(addDays(c.dueOffset))} (${dueLabel(c.dueOffset).text.toLowerCase()})` : "";
+  const need = sortCorr(list.filter(corrNeedsTgc));
+  const others = sortCorr(list.filter(c => corrMatches(c, "others")));
+  const drafts = list.filter(c => corrMatches(c, "drafts"));
+  const lines = [need.length
+    ? `${plural(need.length,"letter")} ${need.length === 1 ? "needs" : "need"} a response from TGC${where}:`
+    : `Nothing needs a response from TGC${where}.`];
+  need.forEach(c => lines.push(`• **${projectName(c.project)}**: ${c.subject}, from ${c.party}${due(c)}`));
+  if (others.length){
+    lines.push(`\n${plural(others.length,"item")} ${others.length === 1 ? "is" : "are"} waiting on others:`);
+    others.forEach(c => lines.push(`• **${projectName(c.project)}**: ${c.subject}, with ${c.bic}${due(c)}`));
+  }
+  if (drafts.length) lines.push(`\n${plural(drafts.length,"draft")} ${isCorp() ? "with project teams" : "in your approval queue"}.`);
+  return lines.join("\n");
 }
 function demoSchedule(){
   const ps = state.data.projects;
@@ -3042,8 +3704,8 @@ function viewConnections(){
     { name:"Microsoft Entra ID", use:"Sign-in", status:["pos","Connected"], detail:`Signed in as ${u.email}. Access is removed automatically when an account is disabled.` },
     { name:"Microsoft 365", use:"SharePoint, Outlook, Teams", status:["pos","Connected"], detail:"Project folders, email threads and meeting transcripts." },
     corp
-      ? { name:"Procore", use:"RFIs, submittals, change events, commitments, daily logs, Pay", status:["pos","Connected, read only"], detail:"Corporate access can view every project but can’t approve or write to Procore." }
-      : { name:"Procore", use:"RFIs, submittals, change events, commitments, daily logs, Pay", status:["pos","Connected"], detail:`Authorized as ${u.name}. Every action runs under your Procore permissions and appears in Procore’s history under your name.`, action:"Reconnect" },
+      ? { name:"Procore", use:"RFIs, submittals, correspondence, change events, commitments, directory, daily logs, Pay", status:["pos","Connected, read only"], detail:"Corporate access can view every project but can’t approve or write to Procore." }
+      : { name:"Procore", use:"RFIs, submittals, correspondence, change events, commitments, directory, daily logs, Pay", status:["pos","Connected"], detail:`Authorized as ${u.name}. Every action runs under your Procore permissions and appears in Procore’s history under your name.`, action:"Reconnect" },
     { name:"Sage", use:"Job cost, commitments, invoices, retainage", status:["warn","Needs decision"], detail:"Confirm the system of record before the connector is built: Sage Intacct (2026 Manual) or Sage 300 (job descriptions)." },
     { name:"SmartPM", use:"Schedule analytics", status:["pos","Connected, read only"], detail:"Forecasted completion dates and schedule quality." },
     { name:"Bridgit", use:"Resource schedule", status:["warn","Cleanup required"], detail:"Remove 0.01% placeholders and over-100% bookings before using it for capacity planning." },
@@ -3116,7 +3778,7 @@ function renderDrawerHead(item){
   $("#drawerHead").innerHTML = `
     <div class="drawer-tags">
       <span class="tag">${esc(item.type)}</span>
-      <span class="pill">SOP ${esc(item.sop)}</span>
+      ${item.sop ? `<span class="pill">SOP ${esc(item.sop)}</span>` : ""}
       <span class="pill info">${esc(isCorp() ? "View only" : levelText)}</span>
       <button type="button" class="icon-btn" data-action="close-drawer" aria-label="Close">&times;</button>
     </div>
@@ -3242,7 +3904,7 @@ function renderDrawerFoot(item){
 function refreshAfterChange(id){
   if (!state.data) return;
   renderNav();
-  if (["approvals","today","activity","project"].includes(state.view)) renderMain();
+  if (["approvals","today","activity","project","correspondence"].includes(state.view)) renderMain();
   if (state.openId === id) renderDrawer();
 }
 
@@ -3432,6 +4094,15 @@ document.addEventListener("click", async e => {
       }
       break;
     }
+    case "corr-new":    openCorrForm({ project: el.dataset.project }); break;
+    case "corr-reply":  openCorrForm({ replyTo: el.dataset.id }); break;
+    case "corr-cancel": state.corrForm = null; renderMain(); break;
+    case "corr-submit": await submitCorrDraft(); break;
+    case "corr-all":
+      state.filters.cProject = el.dataset.project || "all";
+      state.filters.cShow = "all";
+      go("correspondence");
+      break;
     case "approve":     await approveItem(state.openId); break;
     case "show-return": state.noteMode = "return"; renderDrawerFoot(findItem(state.openId)); break;
     case "show-reject": state.noteMode = "reject"; renderDrawerFoot(findItem(state.openId)); break;
@@ -3491,6 +4162,8 @@ document.addEventListener("input", e => {
     e.target.style.height = "auto";
     e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px";
   }
+  if (state.corrForm && e.target.id === "corrSubject") state.corrForm.subject = e.target.value;
+  if (state.corrForm && e.target.id === "corrNote")    state.corrForm.note = e.target.value;
 });
 
 document.addEventListener("change", e => {
@@ -3509,6 +4182,14 @@ document.addEventListener("change", e => {
   }
   if (t.id === "qType"){ state.filters.qType = t.value; renderMain(); }
   if (t.id === "askProject"){ state.askProject = t.value; renderMain(); }
+  if (t.id === "corrProject" && state.corrForm){
+    state.corrForm.project = t.value;
+    state.corrForm.to = 0;
+    renderMain();
+    const s = $("#corrProject"); if (s) s.focus();
+  }
+  if (t.id === "corrType" && state.corrForm) state.corrForm.type = t.value;
+  if (t.id === "corrTo" && state.corrForm)   state.corrForm.to = parseInt(t.value, 10) || 0;
 });
 
 /* ============================================================
